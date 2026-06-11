@@ -1,0 +1,17 @@
+@model IEnumerable<MedicineViewModel>
+@{ ViewData["Title"] = "Expiry Report"; }
+<div class="page-header"><h2><i class="bi bi-calendar-x"></i> Expiry Report</h2></div>
+<div class="legend-bar"><span class="legend-item"><span class="legend-swatch expiry"></span> Expired or within @ValidationConstants.NearExpiryDays days</span></div>
+<div class="content-card">
+    <table class="table table-pharmacy">
+        <thead><tr><th>Medicine</th><th>Category</th><th>Expiry</th><th>Stock</th></tr></thead>
+        <tbody>
+        @foreach (var m in Model)
+        {
+            <tr class="row-near-expiry">
+                <td>@m.TradeName</td><td>@m.CategoryName</td><td>@m.ExpiryDate.ToShortDateString()</td><td>@m.QuantityInStock</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>

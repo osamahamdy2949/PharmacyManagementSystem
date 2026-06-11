@@ -1,0 +1,23 @@
+@model IEnumerable<SalesReturnListItemViewModel>
+@using PharmacyManagement.BLL.ViewModels.SalesReturnViewModels
+@{ ViewData["Title"] = "Sales Returns"; ViewData["PageTitle"] = "Sales Returns"; }
+<partial name="_PageHeader" />
+<div class="content-card">
+<table class="table table-pharmacy table-striped">
+    <thead><tr><th>Return #</th><th>Invoice #</th><th>Customer</th><th>Date</th><th>Total</th><th>Reason</th><th></th></tr></thead>
+    <tbody>
+    @foreach (var r in Model)
+    {
+        <tr>
+            <td>@r.Id</td>
+            <td>@r.SalesInvoiceId</td>
+            <td>@r.CustomerName</td>
+            <td>@DisplayHelpers.Date(r.ReturnDate)</td>
+            <td>@DisplayHelpers.Egp(r.TotalAmount)</td>
+            <td>@r.Reason</td>
+            <td><a asp-action="Details" asp-route-id="@r.Id" class="btn btn-sm btn-outline-info">Details</a></td>
+        </tr>
+    }
+    </tbody>
+</table>
+</div>

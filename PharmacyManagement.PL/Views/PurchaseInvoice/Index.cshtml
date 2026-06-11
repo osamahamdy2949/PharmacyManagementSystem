@@ -1,0 +1,103 @@
+@model IEnumerable<PurchaseInvoiceViewModel>
+@{
+    ViewData["Title"] = "Purchase Invoices";
+    ViewData["PageTitle"] = "Purchases";
+    ViewData["AddUrl"] = Url.Action("Create");
+    ViewData["AddText"] = "New Purchase";
+    var pending = ViewBag.PendingBatches as IReadOnlyList<PendingBatchViewModel> ?? Array.Empty<PendingBatchViewModel>();
+}
+<partial name="_PageHeader" />
+
+@if (pending.Any())
+{
+    <div class="content-card mb-3">
+        <h5 class="mb-3"><i class="bi bi-hourglass-split text-warning"></i> Pending Activation (inactive stock)</h5>
+        <table class="table table-sm table-pharmacy">
+            <thead><tr><th>Medicine</th><th>SKU</th><th>Dose</th><th>Batch</th><th>Supplier</th><th>Qty</th><th></th></tr></thead>
+            <tbody>
+            @foreach (var p in pending)
+            {
+                <tr>
+                    <td>@p.MedicineName</td>
+                    <td><code>@p.Sku</code></td>
+                    <td>@p.Dose</td>
+                    <td>@p.BatchNumber</td>
+                    <td>@p.SupplierName</td>
+                    <td>@p.PendingQuantity @p.PurchaseUnit</td>
+                    <td>
+                        <div class="d-flex gap-1">
+                            <a asp-action="Activate" asp-route-id="@p.BatchId" class="btn btn-sm btn-pharmacy">Activate</a>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="editPendingQuantity(@p.BatchId, @p.PendingQuantity)" title="Edit Quantity"><i class="bi bi-pencil"></i></button>
+                            <form asp-action="DeletePendingBatch" method="post" onsubmit="return confirm('Are you sure you want to permanently delete this pending batch?');">
+                                <input type="hidden" name="id" value="@p.BatchId" />
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete Batch"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        function editPendingQuantity(batchId, currentQuantity) {
+            var newQty = prompt("Enter new quantity for this pending batch:", currentQuantity);
+            if (newQty !== null && newQty.trim() !== "") {
+                var parsedQty = parseInt(newQty);
+                if (!isNaN(parsedQty) && parsedQty > 0) {
+                    var form = document.createElement("form");
+                    form.method = "post";
+                    form.action = "@Url.Action("EditPendingBatchQuantity")";
+                    
+                    var idInput = document.createElement("input");
+                    idInput.type = "hidden";
+                    idInput.name = "id";
+                    idInput.value = batchId;
+                    form.appendChild(idInput);
+                    
+                    var qtyInput = document.createElement("input");
+                    qtyInput.type = "hidden";
+                    qtyInput.name = "quantity";
+                    qtyInput.value = parsedQty;
+                    form.appendChild(qtyInput);
+
+                    var token = document.querySelector('input[name="__RequestVerificationToken"]');
+                    if (token) {
+                        var tokenInput = document.createElement("input");
+                        tokenInput.type = "hidden";
+                        tokenInput.name = "__RequestVerificationToken";
+                        tokenInput.value = token.value;
+                        form.appendChild(tokenInput);
+                    }
+
+                    document.body.appendChild(form);
+                    form.submit();
+                } else {
+                    alert("Please enter a valid quantity greater than 0.");
+                }
+            }
+        }
+    </script>
+}
+
+<div class="content-card">
+<table class="table table-pharmacy table-striped">
+    <thead><tr><th>Invoice #</th><th>Date</th><th>Supplier</th><th>Total</th><th></th></tr></thead>
+    <tbody>
+    @foreach (var p in Model)
+    {
+        <tr>
+            <td>@p.Id</td><td>@DisplayHelpers.Date(p.InvoiceDate)</td><td>@p.SupplierName</td>
+            <td>@DisplayHelpers.Egp(p.TotalAmount)</td>
+            <td>
+                <a asp-action="Details" asp-route-id="@p.Id" class="btn btn-sm btn-outline-info">Details</a>
+                <a asp-action="DownloadReceipt" asp-route-id="@p.Id" class="btn btn-sm btn-outline-primary"><i class="bi bi-file-pdf"></i></a>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>
+</div>

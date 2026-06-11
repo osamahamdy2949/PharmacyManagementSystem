@@ -1,0 +1,45 @@
+@model IEnumerable<BatchInventoryItemViewModel>
+@{
+    ViewData["Title"] = "Inventory";
+    var filter = (InventoryFilter)ViewBag.Filter;
+}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <h2><i class="bi bi-box-seam"></i> Inventory</h2>
+    <div class="btn-group">
+        <a asp-action="Index" asp-route-filter="All" class="btn btn-sm @(filter == InventoryFilter.All ? "btn-pharmacy" : "btn-outline-secondary")">All</a>
+        <a asp-action="Index" asp-route-filter="LowStock" class="btn btn-sm @(filter == InventoryFilter.LowStock ? "btn-pharmacy" : "btn-outline-secondary")">Low Stock</a>
+        <a asp-action="Index" asp-route-filter="NearExpiry" class="btn btn-sm @(filter == InventoryFilter.NearExpiry ? "btn-pharmacy" : "btn-outline-secondary")">Near Expiry</a>
+        <a asp-action="Index" asp-route-filter="Expired" class="btn btn-sm @(filter == InventoryFilter.Expired ? "btn-pharmacy" : "btn-outline-secondary")">Expired</a>
+        <a asp-action="Index" asp-route-filter="OutOfStock" class="btn btn-sm @(filter == InventoryFilter.OutOfStock ? "btn-pharmacy" : "btn-outline-secondary")">Out Of Stock</a>
+    </div>
+</div>
+<div class="content-card">
+<table class="table table-pharmacy table-striped table-sm">
+    <thead>
+        <tr>
+            <th>SKU</th><th>Medicine</th><th>Form</th><th>Category</th><th>Dose</th><th>Batch</th>
+            <th>Stock (Purchase)</th><th>Stock (Sale)</th><th>Expiry</th>
+            <th>Purchase Price</th><th>Selling Price</th><th>Status</th>
+        </tr>
+    </thead>
+    <tbody>
+    @foreach (var item in Model)
+    {
+        <tr>
+            <td><code>@item.Sku</code></td>
+            <td>@item.MedicineName</td>
+            <td>@item.MedicineForm</td>
+            <td>@item.CategoryName</td>
+            <td>@item.Dose</td>
+            <td>@item.BatchNumber</td>
+            <td>@item.StockByPurchaseUnit</td>
+            <td>@item.StockBySellingUnit</td>
+            <td>@DisplayHelpers.Date(item.ExpiryDate)</td>
+            <td>@DisplayHelpers.Egp(item.PurchasePrice)</td>
+            <td>@DisplayHelpers.Egp(item.SellingPrice)</td>
+            <td><span class="badge" style="background:@item.StatusColor">@item.Status</span></td>
+        </tr>
+    }
+    </tbody>
+</table>
+</div>

@@ -1,0 +1,21 @@
+@model CustomerViewModel
+@{ ViewData["Title"] = "Create Customer"; ViewData["PageTitle"] = "Create Customer"; ViewData["AddUrl"] = null; }
+<partial name="_PageHeader" />
+<div class="content-card col-md-6">
+<form asp-action="Create" method="post">
+    <div class="form-field mb-3">
+        <label asp-for="Name" class="form-label"></label>
+        <span asp-validation-for="Name" class="field-error"></span>
+        <input asp-for="Name" class="form-control" maxlength="50" />
+    </div>
+    <div class="form-field mb-3">
+        <label asp-for="Phone" class="form-label"></label>
+        <span asp-validation-for="Phone" class="field-error"></span>
+        <input asp-for="Phone" class="form-control" maxlength="11" placeholder="EX : 01123456789" />
+    </div>
+    <partial name="_ModelLevelErrors" />
+    <button type="submit" class="btn btn-pharmacy">Save</button>
+    <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+</form>
+</div>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

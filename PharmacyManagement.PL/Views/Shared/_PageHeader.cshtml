@@ -1,0 +1,12 @@
+@{
+    var title = ViewData["PageTitle"] as string ?? ViewData["Title"]?.ToString() ?? "";
+    var addUrl = ViewData["AddUrl"] as string;
+    var addText = ViewData["AddText"] as string ?? "Add New";
+}
+<div class="page-header">
+    <h2>@title</h2>
+    @if (!string.IsNullOrEmpty(addUrl))
+    {
+        <a href="@addUrl" class="btn btn-pharmacy"><i class="bi bi-plus-lg"></i> @addText</a>
+    }
+</div>

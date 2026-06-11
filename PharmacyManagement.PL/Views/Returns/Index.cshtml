@@ -1,0 +1,20 @@
+@{ ViewData["Title"] = "Returns"; ViewData["PageTitle"] = "Returns"; }
+<partial name="_PageHeader" />
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="content-card h-100 text-center p-4">
+            <i class="bi bi-arrow-return-left display-4 text-primary mb-3"></i>
+            <h4>Sales Returns</h4>
+            <p class="text-muted">Return sold items — stock is added back to inventory.</p>
+            <a asp-controller="SalesReturn" asp-action="Index" class="btn btn-pharmacy">Open Sales Returns</a>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="content-card h-100 text-center p-4">
+            <i class="bi bi-arrow-return-right display-4 text-warning mb-3"></i>
+            <h4>Purchase Returns</h4>
+            <p class="text-muted">Return purchased items — stock is deducted from inventory.</p>
+            <a asp-controller="PurchaseReturn" asp-action="Index" class="btn btn-pharmacy">Open Purchase Returns</a>
+        </div>
+    </div>
+</div>

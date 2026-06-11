@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Pharmacy">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#14b8a6"/>
+      <stop offset="100%" style="stop-color:#0f766e"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#g)"/>
+  <rect x="28" y="14" width="8" height="36" rx="2" fill="#fff"/>
+  <rect x="14" y="28" width="36" height="8" rx="2" fill="#fff"/>
+  <circle cx="48" cy="48" r="6" fill="#fbbf24" stroke="#fff" stroke-width="1.5"/>
+</svg>

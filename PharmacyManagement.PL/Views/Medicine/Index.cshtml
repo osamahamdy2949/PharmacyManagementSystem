@@ -1,0 +1,63 @@
+@model IEnumerable<MedicineViewModel>
+@using PharmacyManagement.DAL.Common
+@{
+    ViewData["Title"] = "Medicines";
+    ViewData["PageTitle"] = "Medicines";
+    var canManage = User.IsInRole(RoleNames.Administrator) || User.IsInRole(RoleNames.Pharmacist);
+    if (canManage)
+    {
+        ViewData["AddUrl"] = Url.Action("Create");
+        ViewData["AddText"] = "Add Medicine";
+    }
+    var search = Context.Request.Query["search"].ToString();
+}
+<partial name="_PageHeader" />
+
+<div class="content-card mb-3">
+    <form asp-action="Index" method="get" class="row g-2 align-items-end">
+        <div class="col-md-8">
+            <label class="form-label fw-semibold"><i class="bi bi-search"></i> Search by trade or scientific name</label>
+            <input type="search" name="search" value="@search" class="form-control form-control-lg"
+                   placeholder="Trade name or scientific name..." />
+        </div>
+        <div class="col-md-4">
+            <button type="submit" class="btn btn-pharmacy w-100">Search</button>
+        </div>
+    </form>
+</div>
+
+<div class="content-card">
+    <table class="table table-pharmacy table-hover">
+        <thead>
+            <tr>
+                <th>Trade Name</th><th>Scientific Name</th><th>Form</th><th>Category</th>
+                <th>Purchase Price</th><th>Selling Price</th><th></th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var m in Model)
+        {
+            <tr>
+                <td><strong>@m.TradeName</strong></td>
+                <td>@m.ScientificName</td>
+                <td>@m.MedicineForm</td>
+                <td>@m.CategoryName</td>
+                <td>@DisplayHelpers.Egp(m.PurchasePrice)</td>
+                <td>@DisplayHelpers.Egp(m.SellingPrice)</td>
+                <td class="text-nowrap">
+                    <a asp-action="Details" asp-route-id="@m.Id" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a>
+                    @if (canManage)
+                    {
+                        <a asp-action="Edit" asp-route-id="@m.Id" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
+                        <a asp-action="Delete" asp-route-id="@m.Id" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
+                    }
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+    @if (!Model.Any())
+    {
+        <p class="text-muted text-center py-4 mb-0">No medicines found.</p>
+    }
+</div>

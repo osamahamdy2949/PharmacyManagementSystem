@@ -1,0 +1,12 @@
+@model IEnumerable<PurchaseReportItemViewModel>
+@{ ViewData["Title"] = "Purchase Report"; }
+<h2>Purchase Report</h2>
+<table class="table table-striped">
+    <thead><tr><th>Invoice</th><th>Date</th><th>Supplier</th><th>Total</th></tr></thead>
+    <tbody>
+    @foreach (var p in Model)
+    {
+        <tr><td>#@p.InvoiceId</td><td>@p.InvoiceDate.ToShortDateString()</td><td>@p.SupplierName</td><td>@DisplayHelpers.Egp(p.TotalAmount)</td></tr>
+    }
+    </tbody>
+</table>

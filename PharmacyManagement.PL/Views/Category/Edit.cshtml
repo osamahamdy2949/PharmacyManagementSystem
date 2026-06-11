@@ -1,0 +1,22 @@
+@model CategoryViewModel
+@{ ViewData["Title"] = "Edit Category"; ViewData["PageTitle"] = "Edit Category"; }
+<partial name="_PageHeader" />
+<div class="content-card col-md-6">
+<form asp-action="Edit" method="post">
+    <input type="hidden" asp-for="Id" />
+    <div class="form-field mb-3">
+        <label asp-for="Name" class="form-label"></label>
+        <span asp-validation-for="Name" class="field-error"></span>
+        <input asp-for="Name" class="form-control" />
+    </div>
+    <div class="form-field mb-3">
+        <label asp-for="Description" class="form-label"></label>
+        <span asp-validation-for="Description" class="field-error"></span>
+        <textarea asp-for="Description" class="form-control"></textarea>
+    </div>
+    <partial name="_ModelLevelErrors" />
+    <button type="submit" class="btn btn-pharmacy">Save</button>
+    <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+</form>
+</div>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

@@ -1,0 +1,36 @@
+@model MedicineViewModel
+@using PharmacyManagement.DAL.Common
+@{
+    ViewData["Title"] = "Medicine Details";
+    var canManage = User.IsInRole(RoleNames.Administrator) || User.IsInRole(RoleNames.Pharmacist);
+}
+<div class="page-header d-flex justify-content-between">
+    <h2>@Model.TradeName</h2>
+    @if (canManage)
+    {
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-pharmacy">Edit</a>
+    }
+</div>
+<div class="content-card">
+    <h5 class="mb-3">Summary</h5>
+    <dl class="row mb-4">
+        <dt class="col-sm-3">Trade Name</dt><dd class="col-sm-9">@Model.TradeName</dd>
+        <dt class="col-sm-3">Scientific Name</dt><dd class="col-sm-9">@Model.ScientificName</dd>
+        <dt class="col-sm-3">Form</dt><dd class="col-sm-9">@Model.MedicineForm</dd>
+        <dt class="col-sm-3">Category</dt><dd class="col-sm-9">@Model.CategoryName</dd>
+        <dt class="col-sm-3">Purchase Price</dt><dd class="col-sm-9">@DisplayHelpers.Egp(Model.PurchasePrice)</dd>
+        <dt class="col-sm-3">Selling Price</dt><dd class="col-sm-9">@DisplayHelpers.Egp(Model.SellingPrice)</dd>
+    </dl>
+    <h5 class="mb-3">Details</h5>
+    <dl class="row mb-0">
+        <dt class="col-sm-3">SKU</dt><dd class="col-sm-9"><code>@Model.SerialNumber</code></dd>
+        <dt class="col-sm-3">Manufacturer</dt><dd class="col-sm-9">@Model.Manufacturer</dd>
+        <dt class="col-sm-3">Description</dt><dd class="col-sm-9">@(Model.Description ?? "—")</dd>
+        <dt class="col-sm-3">Stock (sale units)</dt><dd class="col-sm-9">@Model.QuantityInStock</dd>
+        @if (Model.UnitsPerPurchaseUnit > 1)
+        {
+            <dt class="col-sm-3">Units</dt><dd class="col-sm-9">@Model.UnitInfo</dd>
+        }
+    </dl>
+</div>
+<a asp-action="Index" class="btn btn-secondary mt-3">Back</a>

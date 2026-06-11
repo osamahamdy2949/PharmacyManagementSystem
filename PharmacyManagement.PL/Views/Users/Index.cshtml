@@ -1,0 +1,22 @@
+@model IEnumerable<PharmacyManagement.PL.Controllers.UserListItemViewModel>
+@{ ViewData["Title"] = "Users"; }
+<div class="page-header d-flex justify-content-between">
+    <h2><i class="bi bi-people-fill"></i> User Management</h2>
+    <a asp-action="Create" class="btn btn-pharmacy">Add User</a>
+</div>
+<div class="content-card">
+<table class="table table-pharmacy table-striped">
+    <thead><tr><th>Name</th><th>Email</th><th>Roles</th><th></th></tr></thead>
+    <tbody>
+    @foreach (var u in Model)
+    {
+        <tr>
+            <td>@u.FullName</td>
+            <td>@u.Email</td>
+            <td>@u.Roles</td>
+            <td><a asp-action="ResetPassword" asp-route-id="@u.Id" class="btn btn-sm btn-outline-warning">Reset Password</a></td>
+        </tr>
+    }
+    </tbody>
+</table>
+</div>

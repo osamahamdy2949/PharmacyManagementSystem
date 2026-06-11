@@ -1,0 +1,64 @@
+@model PharmacyManagement.BLL.ViewModels.PurchaseReturnViewModels.PurchaseReturnViewModel
+@{ ViewData["Title"] = "Return Details"; ViewData["PageTitle"] = "Purchase Return Details"; }
+
+<div class="page-header mb-4 border-bottom pb-3">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h2 class="fw-bold text-primary mb-1"><i class="bi bi-file-earmark-text me-2 opacity-75"></i> Return #@Model.Id</h2>
+            <p class="text-muted mb-0">Processed on @Model.ReturnDate.ToString("MMM dd, yyyy")</p>
+        </div>
+        <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-2"></i> Back to Returns</a>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <div class="content-card h-100 border-0 shadow-sm">
+            <h6 class="text-uppercase text-muted fw-bold letter-spacing-1 mb-3">Return Info</h6>
+            <p class="mb-1"><strong>Invoice ID:</strong> <a asp-controller="PurchaseInvoice" asp-action="Details" asp-route-id="@Model.PurchaseInvoiceId">#@Model.PurchaseInvoiceId</a></p>
+            <p class="mb-1"><strong>Supplier:</strong> @Model.SupplierName</p>
+            <p class="mb-0"><strong>Reason:</strong> <span class="badge bg-warning text-dark">@Model.Reason</span></p>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="content-card h-100 border-0 shadow-sm">
+            <h6 class="text-uppercase text-muted fw-bold letter-spacing-1 mb-3">Notes</h6>
+            <p class="mb-0 text-dark">@(string.IsNullOrWhiteSpace(Model.Notes) ? "No additional notes provided." : Model.Notes)</p>
+        </div>
+    </div>
+</div>
+
+<div class="content-card shadow-sm border-0 p-0 overflow-hidden mb-4">
+    <div class="p-4 border-bottom bg-light">
+        <h5 class="fw-bold text-secondary mb-0"><i class="bi bi-box-seam me-2"></i> Returned Items</h5>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-pharmacy mb-0">
+            <thead class="bg-light">
+                <tr>
+                    <th>Medicine</th>
+                    <th>Batch #</th>
+                    <th class="text-center">Return Qty</th>
+                    <th class="text-end">Unit Price</th>
+                    <th class="text-end">Subtotal</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.Items)
+                {
+                    <tr>
+                        <td class="fw-bold text-dark">@item.MedicineName</td>
+                        <td><span class="badge bg-light text-dark border">@item.BatchNumber</span></td>
+                        <td class="text-center fw-bold text-danger">-@item.Quantity</td>
+                        <td class="text-end">@DisplayHelpers.Egp(item.UnitPrice)</td>
+                        <td class="text-end fw-bold text-primary">@DisplayHelpers.Egp(item.Subtotal)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="p-4 bg-light border-top text-end">
+        <span class="text-uppercase text-muted fw-bold letter-spacing-1 d-block mb-1">Total Refund Value</span>
+        <h3 class="fw-bold text-success mb-0">@DisplayHelpers.Egp(Model.TotalAmount)</h3>
+    </div>
+</div>

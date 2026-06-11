@@ -1,0 +1,12 @@
+@model IEnumerable<SalesByCategoryViewModel>
+@{ ViewData["Title"] = "Sales By Category"; }
+<h2>Sales By Category</h2>
+<table class="table table-striped">
+    <thead><tr><th>Category</th><th>Total Sales</th></tr></thead>
+    <tbody>
+    @foreach (var c in Model)
+    {
+        <tr><td>@c.CategoryName</td><td>@DisplayHelpers.Egp(c.TotalSales)</td></tr>
+    }
+    </tbody>
+</table>

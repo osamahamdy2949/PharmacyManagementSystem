@@ -1,0 +1,9 @@
+@model ProfitReportViewModel
+@{ ViewData["Title"] = "Profit Report"; }
+<h2>Profit Report</h2>
+<div class="content-card">
+    <p><strong>Period:</strong> @Model.FromDate?.ToShortDateString() — @Model.ToDate?.ToShortDateString()</p>
+    <p><strong>Total Sales:</strong> @DisplayHelpers.Egp(Model.TotalSales)</p>
+    <p><strong>Total Purchases:</strong> @DisplayHelpers.Egp(Model.TotalPurchases)</p>
+    <h4><strong>Profit:</strong> @DisplayHelpers.Egp(Model.Profit)</h4>
+</div>

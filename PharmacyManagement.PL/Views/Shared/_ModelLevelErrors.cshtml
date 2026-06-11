@@ -1,0 +1,10 @@
+@{
+    var modelErrors = ViewData.ModelState[string.Empty]?.Errors;
+}
+@if (modelErrors?.Count > 0)
+{
+    @foreach (var error in modelErrors)
+    {
+        <span class="field-error field-error-block">@error.ErrorMessage</span>
+    }
+}

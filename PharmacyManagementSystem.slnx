@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="PharmacyManagement.BLL/PharmacyManagement.BLL.csproj" />
+  <Project Path="PharmacyManagement.PL/PharmacyManagement.PL.csproj" />
+  <Project Path="PharmacyManagment.DAL/PharmacyManagement.DAL.csproj" />
+</Solution>

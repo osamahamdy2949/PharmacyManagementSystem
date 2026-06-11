@@ -1,0 +1,58 @@
+@using PharmacyManagement.DAL.Data.Entities.Enums
+@{
+    var index = ViewData["Index"]!;
+    var doseUnits = Enum.GetValues<DoseUnit>()
+        .Select(u => new { Id = (int)u, Name = u == DoseUnit.Percent ? "%" : u.ToString() });
+    var prefix = $"Items[{index}]";
+}
+<div class="row mb-3 line-item border rounded p-3 bg-white shadow-sm position-relative">
+    <div class="col-md-3 form-field">
+        <label class="form-label fw-bold text-secondary small">Medicine</label>
+        @Html.ValidationMessage($"{prefix}.MedicineId", null, new { @class = "field-error" })
+        <select name="Items[@index].MedicineId" class="form-select medicine-select border-primary-subtle shadow-none">
+            <option value="">-- Select medicine --</option>
+            @if (ViewBag.Medicines is SelectList list)
+            {
+                foreach (SelectListItem item in list)
+                {
+                    <option value="@item.Value">@item.Text</option>
+                }
+            }
+        </select>
+    </div>
+    <div class="col-md-2 form-field">
+        <label class="form-label fw-bold text-secondary small">Quantity</label>
+        @Html.ValidationMessage($"{prefix}.Quantity", null, new { @class = "field-error" })
+        <input name="Items[@index].Quantity" class="form-control border-primary-subtle shadow-none" type="number" min="1" value="1" />
+    </div>
+    <div class="col-md-3 form-field">
+        <label class="form-label fw-bold text-secondary small">Dose</label>
+        @Html.ValidationMessage($"{prefix}.DoseValue", null, new { @class = "field-error" })
+        @Html.ValidationMessage($"{prefix}.DoseUnit", null, new { @class = "field-error" })
+        @Html.ValidationMessage($"{prefix}.Dose", null, new { @class = "field-error" })
+        <div class="input-group shadow-none">
+            <input name="Items[@index].DoseValue" class="form-control dose-value border-primary-subtle" type="number" min="0.01" step="any" placeholder="e.g. 500" />
+            <select name="Items[@index].DoseUnit" class="form-select dose-unit border-primary-subtle bg-light" style="max-width: 5.5rem;">
+                <option value="">Unit</option>
+                @foreach (var unit in doseUnits)
+                {
+                    <option value="@unit.Id">@unit.Name</option>
+                }
+            </select>
+        </div>
+    </div>
+    <div class="col-md-3 form-field">
+        <label class="form-label fw-bold text-secondary small">Batch</label>
+        @Html.ValidationMessage($"{prefix}.BatchNumber", null, new { @class = "field-error" })
+        <div class="input-group">
+            <span class="input-group-text bg-light text-muted border-primary-subtle"><i class="bi bi-tag-fill"></i></span>
+            <input name="Items[@index].BatchNumber" class="form-control mt-0 new-batch-input border-primary-subtle bg-light text-muted fw-bold" value="Auto-generated" readonly tabindex="-1" />
+        </div>
+        <small class="text-muted" style="font-size: 0.75rem;">Created automatically</small>
+    </div>
+    <div class="col-md-1 d-flex align-items-center justify-content-end">
+        <button type="button" class="btn btn-outline-danger btn-sm remove-line rounded-circle" title="Remove Line" style="width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center;">
+            <i class="bi bi-trash3-fill"></i>
+        </button>
+    </div>
+</div>

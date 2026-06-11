@@ -1,0 +1,32 @@
+@model CustomerViewModel
+@{ ViewData["Title"] = "Edit Customer"; ViewData["PageTitle"] = "Edit Customer"; }
+<partial name="_PageHeader" />
+<div class="content-card col-md-6">
+<form asp-action="Edit" method="post">
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="Name" />
+    <div class="form-field mb-3">
+        <label class="form-label">Name</label>
+        <input class="form-control" value="@Model.Name" readonly />
+    </div>
+    @if (Model.CanEditPhone)
+    {
+        <div class="form-field mb-3">
+            <label asp-for="Phone" class="form-label"></label>
+            <span asp-validation-for="Phone" class="field-error"></span>
+            <input asp-for="Phone" class="form-control" maxlength="11" placeholder="EX : 01123456789" />
+        </div>
+    }
+    else
+    {
+        <div class="form-field mb-3">
+            <label class="form-label">Phone</label>
+            <input class="form-control" value="@Model.PhoneDisplay" readonly />
+        </div>
+    }
+    <partial name="_ModelLevelErrors" />
+    <button type="submit" class="btn btn-pharmacy">Save</button>
+    <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+</form>
+</div>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

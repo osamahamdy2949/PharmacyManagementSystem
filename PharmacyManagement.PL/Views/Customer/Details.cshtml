@@ -1,0 +1,5 @@
+@model CustomerViewModel
+@{ ViewData["Title"] = "Customer Details"; }
+<h2>@Model.Name</h2>
+<dl class="row"><dt class="col-sm-3">Phone</dt><dd class="col-sm-9">@Model.PhoneDisplay</dd></dl>
+<a asp-action="Index" class="btn btn-secondary">Back</a>

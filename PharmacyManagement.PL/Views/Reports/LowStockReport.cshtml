@@ -1,0 +1,17 @@
+@model IEnumerable<MedicineViewModel>
+@{ ViewData["Title"] = "Low Stock Report"; }
+<div class="page-header"><h2><i class="bi bi-exclamation-triangle"></i> Low Stock Report</h2></div>
+<div class="legend-bar"><span class="legend-item"><span class="legend-swatch low"></span> Quantity &lt; @ValidationConstants.LowStockThreshold</span></div>
+<div class="content-card">
+    <table class="table table-pharmacy">
+        <thead><tr><th>Medicine</th><th>Category</th><th>Stock</th><th>Expiry</th></tr></thead>
+        <tbody>
+        @foreach (var m in Model)
+        {
+            <tr class="row-low-stock">
+                <td>@m.TradeName</td><td>@m.CategoryName</td><td>@m.QuantityInStock</td><td>@m.ExpiryDate.ToShortDateString()</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>

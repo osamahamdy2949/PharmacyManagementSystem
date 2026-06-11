@@ -1,0 +1,18 @@
+@model IEnumerable<ExpiredMedicineReportItemViewModel>
+@{ ViewData["Title"] = "Expired Medicines"; }
+<h2>Expired Medicines Report</h2>
+<table class="table table-striped">
+    <thead><tr><th>Medicine</th><th>Batch</th><th>Expiry</th><th>Quantity</th><th>Loss Value</th></tr></thead>
+    <tbody>
+    @foreach (var m in Model)
+    {
+        <tr>
+            <td>@m.MedicineName</td>
+            <td>@m.BatchNumber</td>
+            <td>@m.ExpiryDate.ToShortDateString()</td>
+            <td>@m.Quantity</td>
+            <td>@DisplayHelpers.Egp(m.LossValue)</td>
+        </tr>
+    }
+    </tbody>
+</table>

@@ -1,0 +1,47 @@
+@model CreateSalesInvoiceViewModel
+@{ ViewData["Title"] = "Create Sales Invoice"; ViewData["PageTitle"] = "Create Sales Invoice"; var medicines = ViewBag.Medicines as SelectList; }
+<partial name="_PageHeader" />
+<div class="content-card">
+<form asp-action="Create" method="post">
+    <div class="row mb-3">
+        <div class="col-md-6 form-field">
+            <label asp-for="CustomerId" class="form-label">Customer</label>
+            <span asp-validation-for="CustomerId" class="field-error"></span>
+            <select asp-for="CustomerId" asp-items="ViewBag.CustomerId" class="form-select"></select>
+        </div>
+        <div class="col-md-6 form-field">
+            <label asp-for="InvoiceDate" class="form-label"></label>
+            <span asp-validation-for="InvoiceDate" class="field-error"></span>
+            <input asp-for="InvoiceDate" type="date" class="form-control" />
+        </div>
+    </div>
+    <div class="mb-2">
+        <h5 class="mb-0">Line Items</h5>
+        <span asp-validation-for="Items" class="field-error"></span>
+        <partial name="_ModelLevelErrors" />
+    </div>
+    @for (var i = 0; i < Model.Items.Count; i++)
+    {
+        <div class="row mb-2 border-bottom pb-2">
+            <div class="col-md-5 form-field">
+                <label class="form-label">Medicine</label>
+                <span asp-validation-for="Items[i].MedicineId" class="field-error"></span>
+                <select asp-for="Items[i].MedicineId" asp-items="medicines" class="form-select"></select>
+            </div>
+            <div class="col-md-3 form-field">
+                <label class="form-label">Quantity</label>
+                <span asp-validation-for="Items[i].Quantity" class="field-error"></span>
+                <input asp-for="Items[i].Quantity" class="form-control" />
+            </div>
+            <div class="col-md-3 form-field">
+                <label class="form-label">Unit Price</label>
+                <span asp-validation-for="Items[i].UnitPrice" class="field-error"></span>
+                <input asp-for="Items[i].UnitPrice" class="form-control" />
+            </div>
+        </div>
+    }
+    <button type="submit" class="btn btn-pharmacy mt-3">Create Invoice</button>
+    <a asp-action="Index" class="btn btn-secondary mt-3">Cancel</a>
+</form>
+</div>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

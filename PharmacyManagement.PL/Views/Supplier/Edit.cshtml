@@ -1,0 +1,32 @@
+@model SupplierViewModel
+@{ ViewData["Title"] = "Edit Supplier"; ViewData["PageTitle"] = "Edit Supplier"; }
+<partial name="_PageHeader" />
+<div class="content-card col-md-8">
+<form asp-action="Edit" method="post">
+    <input type="hidden" asp-for="Id" />
+    <div class="form-field mb-3">
+        <label asp-for="Name" class="form-label"></label>
+        <span asp-validation-for="Name" class="field-error"></span>
+        <input asp-for="Name" class="form-control" maxlength="50" readonly />
+    </div>
+    <div class="form-field mb-3">
+        <label asp-for="Email" class="form-label"></label>
+        <span asp-validation-for="Email" class="field-error"></span>
+        <input asp-for="Email" type="email" class="form-control" />
+    </div>
+    <div class="form-field mb-3">
+        <label asp-for="Phone" class="form-label"></label>
+        <span asp-validation-for="Phone" class="field-error"></span>
+        <input asp-for="Phone" class="form-control" maxlength="11" placeholder="EX : 01123456789" />
+    </div>
+    <div class="form-field mb-3">
+        <label asp-for="Address" class="form-label"></label>
+        <span asp-validation-for="Address" class="field-error"></span>
+        <input asp-for="Address" class="form-control" />
+    </div>
+    <partial name="_ModelLevelErrors" />
+    <button type="submit" class="btn btn-pharmacy">Save</button>
+    <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+</form>
+</div>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

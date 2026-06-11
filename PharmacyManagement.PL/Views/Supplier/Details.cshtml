@@ -1,0 +1,9 @@
+@model SupplierViewModel
+@{ ViewData["Title"] = "Supplier Details"; }
+<h2>@Model.Name</h2>
+<dl class="row">
+    <dt class="col-sm-3">Email</dt><dd class="col-sm-9">@Model.Email</dd>
+    <dt class="col-sm-3">Phone</dt><dd class="col-sm-9">@Model.Phone</dd>
+    <dt class="col-sm-3">Address</dt><dd class="col-sm-9">@Model.Address</dd>
+</dl>
+<a asp-action="Index" class="btn btn-secondary">Back</a>

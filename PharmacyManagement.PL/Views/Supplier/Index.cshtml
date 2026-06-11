@@ -1,0 +1,21 @@
+@model IEnumerable<SupplierViewModel>
+@{ ViewData["Title"] = "Suppliers"; ViewData["PageTitle"] = "Suppliers"; ViewData["AddUrl"] = Url.Action("Create"); ViewData["AddText"] = "Add Supplier"; }
+<partial name="_PageHeader" />
+<div class="content-card">
+<table class="table table-pharmacy table-striped">
+    <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th></th></tr></thead>
+    <tbody>
+    @foreach (var s in Model)
+    {
+        <tr>
+            <td>@s.Name</td><td>@s.Email</td><td>@s.Phone</td>
+            <td>
+                <a asp-action="Details" asp-route-id="@s.Id" class="btn btn-sm btn-outline-info">Details</a>
+                <a asp-action="Edit" asp-route-id="@s.Id" class="btn btn-sm btn-outline-secondary">Edit</a>
+                <a asp-action="Delete" asp-route-id="@s.Id" class="btn btn-sm btn-outline-danger">Delete</a>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>
+</div>

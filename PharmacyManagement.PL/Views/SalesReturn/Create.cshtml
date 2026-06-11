@@ -1,0 +1,49 @@
+@model CreateSalesReturnViewModel
+@{ ViewData["Title"] = "Create Sales Return"; ViewData["PageTitle"] = "Create Sales Return"; }
+<partial name="_PageHeader" />
+<div class="content-card">
+    <p class="text-muted">Sales Return — Invoice #@Model.SalesInvoiceId</p>
+    <form asp-action="Create" method="post">
+        <input type="hidden" asp-for="SalesInvoiceId" />
+        <div class="row mb-3">
+            <div class="col-md-4 form-field">
+                <label asp-for="ReturnDate" class="form-label"></label>
+                <span asp-validation-for="ReturnDate" class="field-error"></span>
+                <input asp-for="ReturnDate" type="date" class="form-control" />
+            </div>
+            <div class="col-md-8 form-field">
+                <label asp-for="Reason" class="form-label"></label>
+                <span asp-validation-for="Reason" class="field-error"></span>
+                <input asp-for="Reason" class="form-control" />
+            </div>
+        </div>
+        <table class="table table-pharmacy">
+            <thead><tr><th>Medicine</th><th>Batch</th><th>Unit Price</th><th>Return Qty</th></tr></thead>
+            <tbody>
+            @for (var i = 0; i < Model.Items.Count; i++)
+            {
+                <tr>
+                    <td>
+                        @Model.Items[i].MedicineName
+                        <input type="hidden" asp-for="Items[i].MedicineId" />
+                        <input type="hidden" asp-for="Items[i].MedicineBatchId" />
+                        <input type="hidden" asp-for="Items[i].UnitPrice" />
+                    </td>
+                    <td>@Model.Items[i].BatchNumber</td>
+                    <td>@DisplayHelpers.Egp(Model.Items[i].UnitPrice)</td>
+                    <td>
+                        <div class="form-field">
+                            <span asp-validation-for="Items[i].Quantity" class="field-error"></span>
+                            <input asp-for="Items[i].Quantity" type="number" min="0" class="form-control" style="max-width:120px" />
+                        </div>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+        <partial name="_ModelLevelErrors" />
+        <button type="submit" class="btn btn-pharmacy">Create Return</button>
+        <a asp-controller="SalesInvoice" asp-action="Details" asp-route-id="@Model.SalesInvoiceId" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

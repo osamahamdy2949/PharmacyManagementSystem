@@ -1,0 +1,78 @@
+@model FinishedMedicinesPageViewModel
+@{
+    ViewData["Title"] = "Finished Medicines";
+    ViewData["PageTitle"] = "Finished / Out of Stock — Restock";
+}
+<partial name="_PageHeader" />
+<div class="mb-3 d-flex gap-2 flex-wrap">
+    <a asp-action="DownloadFinishedMedicinesPdf" class="btn btn-pharmacy"><i class="bi bi-file-pdf"></i> Download report PDF</a>
+</div>
+<div class="content-card">
+    <p class="text-muted">Medicines with zero stock. Select supplier and purchase quantity (e.g. boxes). Stock is added in sale units automatically.</p>
+    @foreach (var m in Model.Medicines)
+    {
+        <div class="border rounded p-3 mb-3 bg-light">
+            <div class="row">
+                <div class="col-md-5">
+                    <h6><code>@m.SerialNumber</code> @m.TradeName</h6>
+                    <p class="small mb-0">@m.ScientificName · @m.MedicineForm · @m.CategoryName<br />
+                    @m.UnitInfo · Price: @DisplayHelpers.Egp(m.PurchasePricePerPurchaseUnit) / @m.PurchaseUnit</p>
+                </div>
+                <div class="col-md-7">
+                    <form asp-action="RestockFinishedMedicine" method="post" class="row g-2 align-items-end">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="MedicineId" value="@m.Id" />
+                        <div class="col-md-4">
+                            <label class="form-label">Supplier</label>
+                            <select name="SupplierId" class="form-select" required>
+                                <option value="">-- Select --</option>
+                                @foreach (var s in Model.Suppliers)
+                                {
+                                    <option value="@s.Id">@s.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Dose</label>
+                            <input type="text" name="Dose" class="form-control" placeholder="e.g. 500 mg" required />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Qty (@m.PurchaseUnit)</label>
+                            <input type="number" name="PurchaseQuantity" class="form-control restock-qty" min="1" value="1"
+                                   data-price="@m.PurchasePricePerPurchaseUnit" data-units="@m.UnitsPerPurchaseUnit" data-saleunit="@m.SaleUnit" required />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Total (auto)</label>
+                            <input type="text" class="form-control restock-total" readonly value="@DisplayHelpers.Egp(m.PurchasePricePerPurchaseUnit)" />
+                        </div>
+                        <div class="col-12">
+                            <span class="small text-muted restock-hint">Adds <strong class="restock-sale-units">@m.UnitsPerPurchaseUnit</strong> @(m.SaleUnit)(s) to stock</span>
+                            <button type="submit" class="btn btn-pharmacy btn-sm float-end">Restock (pending activation)</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    }
+    @if (!Model.Medicines.Any())
+    {
+        <p class="text-center text-muted py-4">No finished medicines.</p>
+    }
+</div>
+@section Scripts {
+<script>
+    document.querySelectorAll('.restock-qty').forEach(input => {
+        const row = input.closest('form');
+        const price = parseFloat(input.dataset.price);
+        const units = parseInt(input.dataset.units, 10);
+        const saleUnit = input.dataset.saleunit;
+        const totalInput = row.querySelector('.restock-total');
+        const hint = row.querySelector('.restock-sale-units');
+        input.addEventListener('input', () => {
+            const q = parseInt(input.value, 10) || 0;
+            totalInput.value = (q * price).toFixed(2) + ' L.E';
+            hint.textContent = q * units;
+        });
+    });
+</script>
+}

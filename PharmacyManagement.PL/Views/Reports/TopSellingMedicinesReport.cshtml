@@ -1,0 +1,12 @@
+@model IEnumerable<TopSellingMedicineViewModel>
+@{ ViewData["Title"] = "Top Selling Medicines"; }
+<h2>Top Selling Medicines</h2>
+<table class="table table-striped">
+    <thead><tr><th>Medicine</th><th>Quantity Sold</th></tr></thead>
+    <tbody>
+    @foreach (var m in Model)
+    {
+        <tr><td>@m.MedicineName</td><td>@m.QuantitySold</td></tr>
+    }
+    </tbody>
+</table>

@@ -1,0 +1,129 @@
+@model ActivateBatchViewModel
+@{ ViewData["Title"] = "Activate Stock"; ViewData["PageTitle"] = "Activate Stock"; }
+<partial name="_PageHeader" />
+<div class="content-card">
+    <p class="alert alert-info">
+        Activating <strong>@Model.MedicineName</strong> — Batch <code>@Model.BatchNumber</code> —
+        Dose: @Model.Dose — @Model.PendingQuantity purchase unit(s) pending.
+    </p>
+    <form asp-action="Activate" method="post">
+        <input type="hidden" asp-for="BatchId" />
+        <input type="hidden" asp-for="MedicineName" />
+        <input type="hidden" asp-for="Sku" />
+        <input type="hidden" asp-for="Dose" />
+        <input type="hidden" asp-for="BatchNumber" />
+        <input type="hidden" asp-for="PendingQuantity" />
+        <div class="row">
+            <div class="col-12 mb-3 form-field">
+                <label class="form-label fw-bold">Box Barcodes / Serials (@Model.PendingQuantity required)</label>
+                <div class="row g-2">
+                    @for (int i = 0; i < Model.PendingQuantity; i++)
+                    {
+                        <div class="col-md-4">
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-secondary-subtle">Box @(i + 1)</span>
+                                <input asp-for="Barcodes[i]" class="form-control border-secondary-subtle barcode-input" placeholder="Scan barcode..." required />
+                            </div>
+                            <span asp-validation-for="Barcodes[i]" class="field-error"></span>
+                        </div>
+                    }
+                </div>
+                <small class="text-muted d-block mt-2"><i class="bi bi-info-circle me-1"></i> Scan or type a unique barcode for each physical box. The system will register each box individually for precise inventory tracking.</small>
+            </div>
+            <div class="col-md-3 mb-3 form-field">
+                <label asp-for="ExpiryDate" class="form-label"></label>
+                <span asp-validation-for="ExpiryDate" class="field-error"></span>
+                <input asp-for="ExpiryDate" type="date" class="form-control" 
+                       data-val="true" data-val-futuredate="Expiry Date must be greater than today." 
+                       min="@DateTime.Today.AddDays(1).ToString("yyyy-MM-dd")" />
+            </div>
+            <div class="col-md-3 mb-3 form-field">
+                <label asp-for="ManufactureDate" class="form-label"></label>
+                <span asp-validation-for="ManufactureDate" class="field-error"></span>
+                <input asp-for="ManufactureDate" type="date" class="form-control" 
+                       data-val="true" data-val-pastdate="Manufacture Date must be today or in the past." 
+                       max="@DateTime.Today.ToString("yyyy-MM-dd")" />
+            </div>
+            <div class="col-md-4 mb-3 form-field">
+                <label asp-for="PurchaseUnit" class="form-label"></label>
+                <span asp-validation-for="PurchaseUnit" class="field-error"></span>
+                <select asp-for="PurchaseUnit" asp-items="ViewBag.PurchaseUnits" class="form-select">
+                    <option value="">-- Select Unit --</option>
+                </select>
+            </div>
+            <div class="col-md-4 mb-3 form-field">
+                <label asp-for="SaleUnit" class="form-label"></label>
+                <span asp-validation-for="SaleUnit" class="field-error"></span>
+                <select asp-for="SaleUnit" asp-items="ViewBag.SaleUnits" class="form-select">
+                    <option value="">-- Select Unit --</option>
+                </select>
+            </div>
+            <div class="col-md-4 mb-3 form-field">
+                <label asp-for="UnitsPerPurchaseUnit" class="form-label"></label>
+                <span asp-validation-for="UnitsPerPurchaseUnit" class="field-error"></span>
+                <input asp-for="UnitsPerPurchaseUnit" class="form-control" min="1" />
+                <small class="text-muted">e.g. 2 strips per box → selling price per strip = box price ÷ 2</small>
+            </div>
+            <div class="col-md-4 mb-3 form-field">
+                <label asp-for="PurchasePrice" class="form-label"></label>
+                <span asp-validation-for="PurchasePrice" class="field-error"></span>
+                <div class="input-group"><span class="input-group-text">L.E</span><input asp-for="PurchasePrice" class="form-control" step="0.01" /></div>
+            </div>
+            <div class="col-md-4 mb-3 form-field">
+                <label asp-for="SellingPrice" class="form-label"></label>
+                <span asp-validation-for="SellingPrice" class="field-error"></span>
+                <div class="input-group"><span class="input-group-text">L.E</span><input asp-for="SellingPrice" class="form-control" step="0.01" /></div>
+                <small class="text-muted">Per sale unit (e.g. per strip)</small>
+            </div>
+            <div class="col-md-4 mb-3 form-field">
+                <label asp-for="MinStockLevel" class="form-label"></label>
+                <span asp-validation-for="MinStockLevel" class="field-error"></span>
+                <input asp-for="MinStockLevel" class="form-control" min="1" />
+            </div>
+        </div>
+        <partial name="_ModelLevelErrors" />
+        <button type="submit" class="btn btn-pharmacy">Activate &amp; Add to Inventory</button>
+        <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+@section Scripts { 
+    <partial name="_ValidationScriptsPartial" /> 
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var barcodeInputs = document.querySelectorAll('.barcode-input');
+            barcodeInputs.forEach(function (input, index) {
+                input.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (index < barcodeInputs.length - 1) {
+                            barcodeInputs[index + 1].focus();
+                        }
+                    }
+                });
+            });
+            // Focus the first barcode input on load
+            if (barcodeInputs.length > 0) {
+                barcodeInputs[0].focus();
+            }
+        });
+
+        // Add custom client-side validation methods for dates
+        $.validator.addMethod("futuredate", function (value, element) {
+            if (!value) return true;
+            var inputDate = new Date(value);
+            var today = new Date();
+            today.setHours(0, 0, 0, 0);
+            return inputDate > today;
+        });
+        $.validator.unobtrusive.adapters.addBool("futuredate");
+
+        $.validator.addMethod("pastdate", function (value, element) {
+            if (!value) return true;
+            var inputDate = new Date(value);
+            var today = new Date();
+            today.setHours(0, 0, 0, 0);
+            return inputDate <= today;
+        });
+        $.validator.unobtrusive.adapters.addBool("pastdate");
+    </script>
+}
