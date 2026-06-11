@@ -13,7 +13,7 @@ public class VatService : IVatService
     public (decimal SubTotal, decimal VatAmount, decimal Total) Calculate(decimal subTotal)
     {
         var vat = Math.Round(subTotal * Rate, 2);
-        return (subTotal, vat, subTotal + vat);
+        return (subTotal, 0, subTotal);
     }
 
     public decimal LineTotal(decimal unitPrice, int quantity, decimal discount = 0) =>
