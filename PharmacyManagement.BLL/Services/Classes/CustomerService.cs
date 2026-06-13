@@ -103,4 +103,35 @@ public class CustomerService : ICustomerService
         await _unitOfWork.SaveChangesAsync();
         return ServiceResult<int>.Ok(customer.Id);
     }
+
+    public async Task<CustomerProfileViewModel?> GetCustomerProfileAsync(int id)
+    {
+        var item = await _unitOfWork.GetRepository<Customer>().Query()
+            .Include(c => c.SalesInvoices)
+            .FirstOrDefaultAsync(c => c.Id == id);
+            
+        if (item == null) return null;
+        
+        var vm = _mapper.Map<CustomerProfileViewModel>(item);
+        vm.TotalInvoices = item.SalesInvoices.Count;
+        return vm;
+    }
+
+    public async Task<IReadOnlyList<CustomerDebtHistoryViewModel>> GetCustomerDebtHistoryAsync(int id)
+    {
+        var invoices = await _unitOfWork.GetRepository<SalesInvoice>().Query()
+            .Where(s => s.CustomerId == id && s.SaleType == PharmacyManagement.DAL.Data.Entities.Enums.SaleType.Credit)
+            .OrderByDescending(s => s.InvoiceDate)
+            .ToListAsync();
+            
+        return invoices.Select(s => new CustomerDebtHistoryViewModel
+        {
+            InvoiceId = s.Id,
+            InvoiceDate = s.InvoiceDate,
+            TotalAmount = s.TotalAmount,
+            PaidAmount = s.PaidAmount,
+            RemainingAmount = s.RemainingAmount,
+            PaymentStatus = s.PaymentStatus.ToString()
+        }).ToList();
+    }
 }

@@ -148,7 +148,7 @@ public class ReportService : IReportService
         var (start, end) = GetDateRange(period, from, to);
         var items = await _unitOfWork.GetRepository<SalesInvoice>().Query()
             .Include(s => s.Customer)
-            .Where(s => s.InvoiceDate >= start && s.InvoiceDate <= end)
+            .Where(s => s.InvoiceDate >= start && s.InvoiceDate < end)
             .OrderByDescending(s => s.InvoiceDate)
             .ToListAsync();
         return _mapper.Map<IReadOnlyList<SalesReportItemViewModel>>(items);
@@ -162,7 +162,7 @@ public class ReportService : IReportService
         var (start, end) = GetDateRange(period, from, to);
         var items = await _unitOfWork.GetRepository<PurchaseInvoice>().Query()
             .Include(p => p.Supplier)
-            .Where(p => p.InvoiceDate >= start && p.InvoiceDate <= end)
+            .Where(p => p.InvoiceDate >= start && p.InvoiceDate < end)
             .OrderByDescending(p => p.InvoiceDate)
             .ToListAsync();
 
@@ -181,19 +181,30 @@ public class ReportService : IReportService
         DateTime? to = null)
     {
         var (start, end) = GetDateRange(period, from, to);
+        
         var sales = await _unitOfWork.GetRepository<SalesInvoice>().Query()
-            .Where(s => s.InvoiceDate >= start && s.InvoiceDate <= end)
+            .Where(s => s.InvoiceDate >= start && s.InvoiceDate < end)
             .SumAsync(s => s.TotalAmount);
+            
         var purchases = await _unitOfWork.GetRepository<PurchaseInvoice>().Query()
-            .Where(p => p.InvoiceDate >= start && p.InvoiceDate <= end)
+            .Where(p => p.InvoiceDate >= start && p.InvoiceDate < end)
             .SumAsync(p => p.TotalAmount);
+
+        // Calculate gross profit based on sold items (Selling Price - Purchase Price) * Quantity
+        var soldItems = await _unitOfWork.Context.Set<SalesInvoiceItem>()
+            .Include(i => i.Medicine)
+            .Where(i => i.SalesInvoice.InvoiceDate >= start && i.SalesInvoice.InvoiceDate < end)
+            .ToListAsync();
+            
+        var grossProfit = soldItems.Sum(i => (i.UnitPrice - i.Medicine.PurchasePrice) * i.Quantity);
 
         return new ProfitReportViewModel
         {
             TotalSales = sales,
             TotalPurchases = purchases,
+            Profit = grossProfit, // Assuming we add a setter to Profit in ViewModel
             FromDate = start,
-            ToDate = end
+            ToDate = end.AddDays(-1)
         };
     }
 
@@ -206,7 +217,7 @@ public class ReportService : IReportService
         var items = await _unitOfWork.GetRepository<SalesInvoiceItem>().Query()
             .Include(i => i.Medicine)
             .Include(i => i.SalesInvoice)
-            .Where(i => i.SalesInvoice.InvoiceDate >= start && i.SalesInvoice.InvoiceDate <= end)
+            .Where(i => i.SalesInvoice.InvoiceDate >= start && i.SalesInvoice.InvoiceDate < end)
             .GroupBy(i => new { i.MedicineId, i.Medicine.TradeName })
             .Select(g => new TopSellingMedicineViewModel
             {
@@ -229,7 +240,7 @@ public class ReportService : IReportService
         var items = await _unitOfWork.GetRepository<SalesInvoiceItem>().Query()
             .Include(i => i.Medicine).ThenInclude(m => m.Category)
             .Include(i => i.SalesInvoice)
-            .Where(i => i.SalesInvoice.InvoiceDate >= start && i.SalesInvoice.InvoiceDate <= end)
+            .Where(i => i.SalesInvoice.InvoiceDate >= start && i.SalesInvoice.InvoiceDate < end)
             .GroupBy(i => i.Medicine.Category.Name)
             .Select(g => new SalesByCategoryViewModel
             {
@@ -309,11 +320,12 @@ public class ReportService : IReportService
         var today = DateTime.Today;
         return period switch
         {
-            ReportPeriod.Daily => (today, today),
-            ReportPeriod.Weekly => (today.AddDays(-6), today),
-            ReportPeriod.Monthly => (new DateTime(today.Year, today.Month, 1), today),
-            ReportPeriod.Custom when from.HasValue && to.HasValue => (from.Value.Date, to.Value.Date),
-            _ => (new DateTime(today.Year, today.Month, 1), today)
+            ReportPeriod.Daily => (today, today.AddDays(1)),
+            ReportPeriod.Weekly => (today.AddDays(-6), today.AddDays(1)),
+            ReportPeriod.Monthly => (new DateTime(today.Year, today.Month, 1), today.AddDays(1)),
+            ReportPeriod.Yearly => (new DateTime(today.Year, 1, 1), today.AddDays(1)),
+            ReportPeriod.Custom when from.HasValue && to.HasValue => (from.Value.Date, to.Value.Date.AddDays(1)),
+            _ => (new DateTime(today.Year, today.Month, 1), today.AddDays(1))
         };
     }
 

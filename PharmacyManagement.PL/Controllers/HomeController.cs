@@ -10,13 +10,13 @@ namespace PharmacyManagement.PL.Controllers;
 [Authorize(Roles = RoleNames.AllStaff)]
 public class HomeController : Controller
 {
-    private readonly IReportService _reportService;
+    private readonly IDashboardService _dashboardService;
 
-    public HomeController(IReportService reportService) => _reportService = reportService;
+    public HomeController(IDashboardService dashboardService) => _dashboardService = dashboardService;
 
     public async Task<IActionResult> Index()
     {
-        var dashboard = await _reportService.GetDashboardAsync();
+        var dashboard = await _dashboardService.GetDashboardDataAsync();
         return View(dashboard);
     }
 

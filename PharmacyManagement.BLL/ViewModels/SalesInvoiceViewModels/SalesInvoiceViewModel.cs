@@ -19,6 +19,12 @@ public class SalesInvoiceViewModel
 
     public string? CustomerName { get; set; }
     public string? DoctorName { get; set; }
+    
+    public string SaleType { get; set; } = string.Empty;
+    public decimal PaidAmount { get; set; }
+    public decimal RemainingAmount { get; set; }
+    public string PaymentStatus { get; set; } = string.Empty;
+    
     public string? CreatedByUserName { get; set; }
     public List<InvoiceItemViewModel> Items { get; set; } = new();
 }

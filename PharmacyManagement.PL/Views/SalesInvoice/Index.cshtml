@@ -1,9 +1,20 @@
 @model IEnumerable<SalesInvoiceViewModel>
 @{ ViewData["Title"] = "Sales History"; ViewData["PageTitle"] = "Sales Invoices"; }
-<partial name="_PageHeader" />
+<div class="page-header d-flex justify-content-between align-items-center">
+    <h2><i class="bi bi-receipt"></i> Sales History</h2>
+    <div class="d-flex gap-2">
+        <form method="get" asp-action="Index" class="d-flex gap-2">
+            <select name="filter" class="form-select w-auto" onchange="this.form.submit()">
+                <option value="" selected="@(string.IsNullOrEmpty((string?)ViewBag.CurrentFilter))">All Invoices</option>
+                <option value="Cash" selected="@((string?)ViewBag.CurrentFilter == "Cash")">Cash Only</option>
+                <option value="Partial" selected="@((string?)ViewBag.CurrentFilter == "Partial")">Partial / Credit Only</option>
+            </select>
+        </form>
+    </div>
+</div>
 <div class="content-card">
 <table class="table table-pharmacy table-striped">
-    <thead><tr><th>#</th><th>Date</th><th>Customer</th><th>Cashier</th><th>Total</th><th></th></tr></thead>
+    <thead><tr><th>#</th><th>Date</th><th>Customer</th><th>Cashier</th><th>Total</th><th>Status</th><th></th></tr></thead>
     <tbody>
     @foreach (var s in Model)
     {
@@ -18,6 +29,27 @@
             <td>@s.CustomerName</td>
             <td><span class="badge bg-light text-dark border"><i class="bi bi-person me-1"></i> @s.CreatedByUserName</span></td>
             <td>@DisplayHelpers.Egp(s.TotalAmount)</td>
+            <td>
+                @if (s.SaleType == "Cash")
+                {
+                    <span class="badge bg-light text-dark border">Cash</span>
+                }
+                else
+                {
+                    @if (s.PaymentStatus == "Paid")
+                    {
+                        <span class="badge bg-success">Paid</span>
+                    }
+                    else if (s.PaymentStatus == "PartiallyPaid")
+                    {
+                        <span class="badge bg-warning text-dark">Partial</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-danger">Credit</span>
+                    }
+                }
+            </td>
             <td>
                 <a asp-action="Details" asp-route-id="@s.Id" class="btn btn-sm btn-outline-info">Details</a>
                 <a asp-action="DownloadReceipt" asp-route-id="@s.Id" class="btn btn-sm btn-outline-primary"><i class="bi bi-file-pdf"></i></a>

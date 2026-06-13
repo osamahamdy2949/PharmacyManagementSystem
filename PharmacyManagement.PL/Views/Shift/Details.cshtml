@@ -1,0 +1,135 @@
+@model ShiftViewModel
+@{ ViewData["Title"] = "Shift Details"; ViewData["PageTitle"] = "Shift Record #" + Model.Id; }
+
+<partial name="_PageHeader" />
+
+<div class="row">
+    <div class="col-lg-4 mb-4">
+        <div class="content-card h-100 @(Model.IsActive ? "bg-primary-subtle border-primary border-opacity-25" : "")">
+            <h5 class="mb-4">General Information</h5>
+            
+            <dl class="row mb-0">
+                <dt class="col-sm-5 text-muted fw-normal mb-2">Status</dt>
+                <dd class="col-sm-7 mb-2">
+                    @if (Model.IsActive)
+                    {
+                        <span class="badge bg-primary">Active</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary">Closed</span>
+                    }
+                </dd>
+                
+                <dt class="col-sm-5 text-muted fw-normal mb-2">Cashier</dt>
+                <dd class="col-sm-7 mb-2 fw-bold"><i class="bi bi-person me-1"></i> @Model.UserName</dd>
+                
+                <dt class="col-sm-5 text-muted fw-normal mb-2">Start Time</dt>
+                <dd class="col-sm-7 mb-2">@Model.StartTime.ToString("dd MMM yyyy, h:mm tt")</dd>
+                
+                <dt class="col-sm-5 text-muted fw-normal mb-2">End Time</dt>
+                <dd class="col-sm-7 mb-2">@(Model.EndTime?.ToString("dd MMM yyyy, h:mm tt") ?? "-")</dd>
+                
+                <dt class="col-sm-5 text-muted fw-normal mb-2">Duration</dt>
+                <dd class="col-sm-7 mb-2">
+                    @{
+                        var end = Model.EndTime ?? DateTime.Now;
+                        var duration = end - Model.StartTime;
+                        @($"{(int)duration.TotalHours}h {duration.Minutes}m")
+                    }
+                </dd>
+            </dl>
+            
+            @if (!string.IsNullOrEmpty(Model.Notes))
+            {
+                <div class="mt-4 pt-3 border-top">
+                    <h6 class="text-muted small fw-bold text-uppercase mb-2">Notes</h6>
+                    <p class="mb-0 fs-6 bg-light p-2 rounded">@Model.Notes</p>
+                </div>
+            }
+        </div>
+    </div>
+    
+    <div class="col-lg-8 mb-4">
+        <div class="content-card h-100">
+            <h5 class="mb-4">Financial Summary</h5>
+            
+            <div class="row g-4 mb-4">
+                <div class="col-md-6">
+                    <div class="card bg-light border-0">
+                        <div class="card-body">
+                            <h6 class="text-muted mb-3">Drawer Calculation</h6>
+                            <div class="d-flex justify-content-between mb-2 text-success">
+                                <span>(+) Cash Sales</span>
+                                <span>@DisplayHelpers.Egp(Model.CashSales)</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2 text-success">
+                                <span>(+) Payments Received</span>
+                                <span>@DisplayHelpers.Egp(Model.TotalPaymentsReceived)</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2 text-danger">
+                                <span>(-) Purchases</span>
+                                <span>@DisplayHelpers.Egp(Model.TotalPurchases)</span>
+                            </div>
+                            <hr class="my-2" />
+                            <div class="d-flex justify-content-between fw-bold text-primary">
+                                <span>Expected Cash</span>
+                                <span>@DisplayHelpers.Egp(Model.SystemExpectedCash)</span>
+                            </div>
+                            <div class="d-flex justify-content-between fw-bold mt-2">
+                                <span>Actual Cash</span>
+                                <span>@(Model.ClosingCash.HasValue ? DisplayHelpers.Egp(Model.ClosingCash.Value) : "-")</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card bg-light border-0 h-100">
+                        <div class="card-body">
+                            <h6 class="text-muted mb-3">Business Metrics</h6>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Total Sales</span>
+                                <span class="fw-bold">@DisplayHelpers.Egp(Model.TotalSales)</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2 ps-3 small text-muted">
+                                <span>└ Cash Sales</span>
+                                <span>@DisplayHelpers.Egp(Model.CashSales)</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2 ps-3 small text-muted">
+                                <span>└ Credit Sales</span>
+                                <span>@DisplayHelpers.Egp(Model.CreditSales)</span>
+                            </div>
+                            <hr class="my-2" />
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Net Cash Flow</span>
+                                <span class="fw-bold @(Model.NetCash >= 0 ? "text-success" : "text-danger")">@DisplayHelpers.Egp(Model.NetCash)</span>
+                            </div>
+                            
+                            @if (Model.CashDifference.HasValue)
+                            {
+                                <div class="mt-4 pt-3 border-top text-center">
+                                    <span class="text-muted d-block small mb-1 fw-bold text-uppercase">Variance</span>
+                                    @if (Math.Abs(Model.CashDifference.Value) < 0.01m)
+                                    {
+                                        <h4 class="text-success mb-0"><i class="bi bi-check-circle me-2"></i>Perfect Match</h4>
+                                    }
+                                    else if (Model.CashDifference.Value > 0)
+                                    {
+                                        <h4 class="text-info mb-0">+@DisplayHelpers.Egp(Model.CashDifference.Value)</h4>
+                                        <span class="small text-muted">Excess Cash</span>
+                                    }
+                                    else
+                                    {
+                                        <h4 class="text-danger mb-0">@DisplayHelpers.Egp(Model.CashDifference.Value)</h4>
+                                        <span class="small text-muted">Cash Shortage</span>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

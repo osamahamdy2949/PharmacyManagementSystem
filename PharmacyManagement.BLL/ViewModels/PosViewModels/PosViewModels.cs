@@ -56,6 +56,9 @@ public class PosCheckoutViewModel
 
     public DateTime InvoiceDate { get; set; } = DateTime.Today;
 
+    public int SaleType { get; set; } // 0 = Cash, 1 = Credit
+    public decimal PaidAmount { get; set; }
+
     public List<PosCartLineViewModel> Items { get; set; } = new();
 }
 

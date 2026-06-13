@@ -25,6 +25,24 @@ public class CustomerController : Controller
         return model == null ? NotFound() : View(model);
     }
 
+    public async Task<IActionResult> Profile(int id)
+    {
+        var model = await _service.GetCustomerProfileAsync(id);
+        return model == null ? NotFound() : View(model);
+    }
+
+    public async Task<IActionResult> DebtHistory(int id)
+    {
+        var customer = await _service.GetByIdAsync(id);
+        if (customer == null) return NotFound();
+        
+        var history = await _service.GetCustomerDebtHistoryAsync(id);
+        ViewBag.CustomerName = customer.Name;
+        ViewBag.CustomerId = id;
+        
+        return View(history);
+    }
+
     public IActionResult Create() => View(new CustomerViewModel());
 
     [HttpPost, ValidateAntiForgeryToken]

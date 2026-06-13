@@ -1,0 +1,67 @@
+@model ShiftSummaryViewModel
+@{ ViewData["Title"] = "Current Shift"; ViewData["PageTitle"] = "Shift Dashboard"; }
+
+<div class="row">
+    <div class="col-lg-4 mb-4">
+        <div class="content-card h-100 bg-primary bg-gradient text-white">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 class="mb-0 text-white"><i class="bi bi-clock-history me-2"></i> Active Shift</h5>
+                <span class="badge bg-white bg-opacity-25 text-white">In Progress</span>
+            </div>
+            
+            <div class="mb-4">
+                <p class="mb-1 text-white text-opacity-75 small">Started At</p>
+                <h4 class="text-white mb-0">@Model.StartTime.ToString("h:mm tt")</h4>
+                <p class="text-white text-opacity-75 small">@Model.StartTime.ToString("dd MMM yyyy")</p>
+            </div>
+            
+            <div class="mb-4">
+                <p class="mb-1 text-white text-opacity-75 small">Cashier</p>
+                <h5 class="text-white mb-0"><i class="bi bi-person-badge me-2"></i>@Model.UserName</h5>
+            </div>
+            
+            <div class="mt-auto pt-4 border-top border-white border-opacity-25 d-grid gap-2">
+                <a asp-action="End" class="btn btn-light text-danger fw-bold"><i class="bi bi-stop-circle me-2"></i> End Shift Now</a>
+                <a asp-controller="SalesInvoice" asp-action="Pos" class="btn btn-outline-light"><i class="bi bi-cart-plus me-2"></i> Go to POS</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-8 mb-4">
+        <div class="content-card h-100">
+            <h5 class="mb-4"><i class="bi bi-calculator me-2"></i> Financial Summary</h5>
+            
+            <div class="row g-4 mb-4">
+                <div class="col-sm-12">
+                    <div class="p-3 bg-primary-subtle rounded-3 d-flex justify-content-between align-items-center border border-primary border-opacity-25">
+                        <div>
+                            <span class="text-primary-emphasis d-block small fw-bold">Expected Drawer Cash</span>
+                            <span class="fs-4 text-primary fw-bold">@DisplayHelpers.Egp(Model.ExpectedCash)</span>
+                        </div>
+                        <i class="bi bi-cash-stack fs-1 text-primary text-opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <h6 class="text-muted mb-3 border-bottom pb-2">Activity Breakdown</h6>
+            <div class="row text-center mb-2">
+                <div class="col-4">
+                    <span class="text-success-emphasis d-block small mb-1">Cash Sales</span>
+                    <span class="fw-bold text-success">+@DisplayHelpers.Egp(Model.CashSales)</span>
+                </div>
+                <div class="col-4 border-start border-end">
+                    <span class="text-info-emphasis d-block small mb-1">Received Payments</span>
+                    <span class="fw-bold text-info">+@DisplayHelpers.Egp(Model.TotalPaymentsReceived)</span>
+                </div>
+                <div class="col-4">
+                    <span class="text-danger-emphasis d-block small mb-1">Purchases (Cash Out)</span>
+                    <span class="fw-bold text-danger">-@DisplayHelpers.Egp(Model.TotalPurchases)</span>
+                </div>
+            </div>
+            
+            <div class="alert alert-secondary mt-4 mb-0 py-2 d-flex justify-content-between align-items-center">
+                <span class="small text-muted"><i class="bi bi-info-circle me-1"></i> Cash Expected does not include credit sales until paid.</span>
+            </div>
+        </div>
+    </div>
+</div>

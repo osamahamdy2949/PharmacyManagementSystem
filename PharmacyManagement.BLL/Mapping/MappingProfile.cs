@@ -4,6 +4,8 @@ using PharmacyManagement.BLL.ViewModels.CustomerViewModels;
 using PharmacyManagement.BLL.ViewModels.InvoiceItemViewModels;
 using PharmacyManagement.BLL.ViewModels.MedicineViewModels;
 using PharmacyManagement.BLL.ViewModels.PosViewModels;
+using PharmacyManagement.BLL.ViewModels.PaymentViewModels;
+using PharmacyManagement.BLL.ViewModels.ShiftViewModels;
 using PharmacyManagement.BLL.ViewModels.PurchaseInvoiceViewModels;
 using PharmacyManagement.BLL.ViewModels.ReportViewModels;
 using PharmacyManagement.BLL.ViewModels.SalesInvoiceViewModels;
@@ -26,6 +28,12 @@ public class MappingProfile : Profile
             .ForMember(d => d.QuantityInStock, o => o.Ignore());
         CreateMap<Supplier, SupplierViewModel>().ReverseMap();
         CreateMap<Customer, CustomerViewModel>().ReverseMap();
+        CreateMap<Customer, CustomerProfileViewModel>().ReverseMap();
+        CreateMap<Shift, ShiftViewModel>().ReverseMap();
+        CreateMap<Payment, PaymentViewModel>()
+            .ForMember(d => d.CustomerName, o => o.MapFrom(s => s.Customer.Name))
+            .ForMember(d => d.PaymentMethod, o => o.MapFrom(s => s.PaymentMethod.ToString()));
+            
         CreateMap<PurchaseInvoice, PurchaseInvoiceViewModel>()
             .ForMember(d => d.SupplierName, o => o.MapFrom(s => s.Supplier.Name))
             .ForMember(d => d.Items, o => o.MapFrom(s => s.Items));
@@ -39,6 +47,8 @@ public class MappingProfile : Profile
             .ForMember(d => d.DoctorName, o => o.MapFrom(s => s.DoctorName))
             .ForMember(d => d.SubTotal, o => o.MapFrom(s => s.SubTotal))
             .ForMember(d => d.VatAmount, o => o.MapFrom(s => s.VatAmount))
+            .ForMember(d => d.SaleType, o => o.MapFrom(s => s.SaleType.ToString()))
+            .ForMember(d => d.PaymentStatus, o => o.MapFrom(s => s.PaymentStatus.ToString()))
             .ForMember(d => d.Items, o => o.MapFrom(s => s.Items));
         CreateMap<SalesInvoiceItem, InvoiceItemViewModel>()
             .ForMember(d => d.MedicineName, o => o.MapFrom(s => s.Medicine.TradeName))

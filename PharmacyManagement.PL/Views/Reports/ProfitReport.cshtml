@@ -1,9 +1,75 @@
 @model ProfitReportViewModel
-@{ ViewData["Title"] = "Profit Report"; }
-<h2>Profit Report</h2>
-<div class="content-card">
-    <p><strong>Period:</strong> @Model.FromDate?.ToShortDateString() — @Model.ToDate?.ToShortDateString()</p>
-    <p><strong>Total Sales:</strong> @DisplayHelpers.Egp(Model.TotalSales)</p>
-    <p><strong>Total Purchases:</strong> @DisplayHelpers.Egp(Model.TotalPurchases)</p>
-    <h4><strong>Profit:</strong> @DisplayHelpers.Egp(Model.Profit)</h4>
+@{ 
+    ViewData["Title"] = "Profit Report";
+    ViewData["PageTitle"] = "Profitability Analysis";
+}
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="content-card">
+            <form method="get" asp-action="ProfitReport" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">Period</label>
+                    <select name="period" class="form-select" id="periodSelect" onchange="toggleCustomDates()">
+                        <option value="Daily" selected="@(ViewBag.Period == ReportPeriod.Daily)">Today</option>
+                        <option value="Weekly" selected="@(ViewBag.Period == ReportPeriod.Weekly)">This Week</option>
+                        <option value="Monthly" selected="@(ViewBag.Period == ReportPeriod.Monthly)">This Month</option>
+                        <option value="Yearly" selected="@(ViewBag.Period == ReportPeriod.Yearly)">This Year</option>
+                        <option value="Custom" selected="@(ViewBag.Period == ReportPeriod.Custom)">Custom Date Range</option>
+                    </select>
+                </div>
+                <div class="col-md-3 custom-dates" style="display: @(ViewBag.Period == ReportPeriod.Custom ? "block" : "none")">
+                    <label class="form-label">From Date</label>
+                    <input type="date" name="from" class="form-control" value="@ViewBag.From?.ToString("yyyy-MM-dd")" />
+                </div>
+                <div class="col-md-3 custom-dates" style="display: @(ViewBag.Period == ReportPeriod.Custom ? "block" : "none")">
+                    <label class="form-label">To Date</label>
+                    <input type="date" name="to" class="form-control" value="@ViewBag.To?.ToString("yyyy-MM-dd")" />
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-filter"></i> Apply Filter</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
+
+<div class="row g-4">
+    <div class="col-md-4">
+        <div class="content-card border-start border-success border-4 h-100 text-center py-4">
+            <h6 class="text-muted text-uppercase fw-bold mb-2">Total Sales</h6>
+            <h2 class="text-success mb-0">@DisplayHelpers.Egp(Model.TotalSales)</h2>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="content-card border-start border-danger border-4 h-100 text-center py-4">
+            <h6 class="text-muted text-uppercase fw-bold mb-2">Total Purchases</h6>
+            <h2 class="text-danger mb-0">@DisplayHelpers.Egp(Model.TotalPurchases)</h2>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="content-card border-start border-primary border-4 h-100 text-center py-4 bg-primary-subtle">
+            <h6 class="text-primary text-uppercase fw-bold mb-2">Estimated Profit</h6>
+            <h1 class="text-primary fw-bold mb-0">@DisplayHelpers.Egp(Model.Profit)</h1>
+        </div>
+    </div>
+</div>
+
+<div class="text-center mt-4 text-muted small">
+    <p><i class="bi bi-info-circle me-1"></i> Data shown is for the period: <strong>@Model.FromDate?.ToString("dd MMM yyyy")</strong> to <strong>@Model.ToDate?.ToString("dd MMM yyyy")</strong>.</p>
+</div>
+
+@section Scripts {
+    <script>
+        function toggleCustomDates() {
+            var period = $('#periodSelect').val();
+            if (period === 'Custom') {
+                $('.custom-dates').show();
+            } else {
+                $('.custom-dates').hide();
+                // Optionally clear the custom dates
+                $('input[type="date"]').val('');
+            }
+        }
+    </script>
+}

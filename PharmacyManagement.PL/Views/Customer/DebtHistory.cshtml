@@ -1,0 +1,71 @@
+@model IEnumerable<CustomerDebtHistoryViewModel>
+@{ ViewData["Title"] = "Debt History"; ViewData["PageTitle"] = ViewBag.CustomerName + " - Credit Invoices"; }
+
+<partial name="_PageHeader" />
+
+<div class="content-card mb-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h5 class="mb-1">Credit Sales History</h5>
+            <p class="text-muted mb-0">All invoices purchased on credit by this customer.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-action="Profile" asp-route-id="@ViewBag.CustomerId" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Back to Profile</a>
+            <a asp-controller="Payment" asp-action="RecordPayment" asp-route-customerId="@ViewBag.CustomerId" class="btn btn-success"><i class="bi bi-cash-stack me-1"></i> Receive Payment</a>
+        </div>
+    </div>
+</div>
+
+<div class="content-card">
+    <table class="table table-pharmacy table-striped">
+        <thead>
+            <tr>
+                <th>Invoice #</th>
+                <th>Date</th>
+                <th>Total Amount</th>
+                <th>Paid Amount</th>
+                <th>Remaining</th>
+                <th>Status</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var invoice in Model)
+            {
+                <tr>
+                    <td>
+                        <a asp-controller="SalesInvoice" asp-action="Details" asp-route-id="@invoice.InvoiceId" class="text-decoration-none fw-bold">#@invoice.InvoiceId</a>
+                    </td>
+                    <td>@DisplayHelpers.Date(invoice.InvoiceDate)</td>
+                    <td>@DisplayHelpers.Egp(invoice.TotalAmount)</td>
+                    <td class="text-success">@DisplayHelpers.Egp(invoice.PaidAmount)</td>
+                    <td class="text-danger fw-bold">@DisplayHelpers.Egp(invoice.RemainingAmount)</td>
+                    <td>
+                        @if (invoice.PaymentStatus == "Paid")
+                        {
+                            <span class="badge bg-success">Paid</span>
+                        }
+                        else if (invoice.PaymentStatus == "PartiallyPaid")
+                        {
+                            <span class="badge bg-warning text-dark">Partial</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-danger">Unpaid</span>
+                        }
+                    </td>
+                    <td>
+                        @if (invoice.RemainingAmount > 0)
+                        {
+                            <a asp-controller="Payment" asp-action="RecordPayment" asp-route-customerId="@ViewBag.CustomerId" asp-route-invoiceId="@invoice.InvoiceId" class="btn btn-sm btn-outline-success">Pay</a>
+                        }
+                    </td>
+                </tr>
+            }
+            @if (!Model.Any())
+            {
+                <tr><td colspan="7" class="text-center py-4 text-muted">No credit history found for this customer.</td></tr>
+            }
+        </tbody>
+    </table>
+</div>

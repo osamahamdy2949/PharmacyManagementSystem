@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using PharmacyManagement.DAL.Common;
 using PharmacyManagement.DAL.Data.Entities;
+using System.Text.Json;
 
 namespace PharmacyManagement.DAL.Data.DbContexts;
 
@@ -34,6 +35,9 @@ public class PharmacyDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<SalesReturnItem> SalesReturnItems => Set<SalesReturnItem>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<Payment> Payments => Set<Payment>();
+    public DbSet<Shift> Shifts => Set<Shift>();
+    public DbSet<UserActivity> UserActivities => Set<UserActivity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -53,10 +57,12 @@ public class PharmacyDbContext : IdentityDbContext<ApplicationUser>
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         var now = DateTime.UtcNow;
-        var auditEntries = new List<AuditLog>();
+        var auditEntries = new List<AuditEntryInfo>();
 
         foreach (var entry in ChangeTracker.Entries<BaseEntity>())
         {
+            var auditAction = entry.State.ToString();
+
             switch (entry.State)
             {
                 case EntityState.Added:
@@ -70,9 +76,10 @@ public class PharmacyDbContext : IdentityDbContext<ApplicationUser>
                     if (!string.IsNullOrEmpty(CurrentUserId))
                         entry.Entity.UpdatedBy = CurrentUserId;
                     break;
-                case EntityState.Deleted when entry.Entity is not AuditLog and not Notification:
+                case EntityState.Deleted when entry.Entity is not AuditLog and not Notification and not Payment and not Shift and not UserActivity:
                     if (entry.Entity is Medicine or Category or Supplier or Customer or MedicineBatch)
                     {
+                        auditAction = EntityState.Deleted.ToString();
                         entry.State = EntityState.Modified;
                         entry.Entity.IsDeleted = true;
                         entry.Entity.DeletedAt = now;
@@ -84,23 +91,46 @@ public class PharmacyDbContext : IdentityDbContext<ApplicationUser>
             if (entry.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
             {
                 var entityName = entry.Entity.GetType().Name;
-                if (entityName is nameof(AuditLog) or nameof(Notification) or nameof(StockTransaction))
+                if (entityName is nameof(AuditLog) or nameof(Notification) or nameof(StockTransaction) or nameof(Payment) or nameof(Shift) or nameof(UserActivity))
                     continue;
 
-                auditEntries.Add(new AuditLog
-                {
-                    UserId = CurrentUserId,
-                    Action = entry.State.ToString(),
-                    Entity = entityName,
-                    EntityId = entry.Entity.Id == 0 ? null : entry.Entity.Id,
-                    NewValue = entry.State == EntityState.Deleted ? null : entry.Entity.ToString()
+                auditEntries.Add(new AuditEntryInfo 
+                { 
+                    Entry = entry, 
+                    Action = auditAction, 
+                    EntityName = entityName 
                 });
             }
         }
 
-        if (auditEntries.Count > 0)
-            AuditLogs.AddRange(auditEntries);
+        var result = await base.SaveChangesAsync(cancellationToken);
 
-        return await base.SaveChangesAsync(cancellationToken);
+        if (auditEntries.Count > 0)
+        {
+            var logs = auditEntries.Select(a => new AuditLog
+            {
+                UserId = CurrentUserId,
+                Action = a.Action,
+                Entity = a.EntityName,
+                EntityId = a.Entry.Entity.Id == 0 ? null : a.Entry.Entity.Id,
+                OldValues = a.Action == "Added" ? null : JsonSerializer.Serialize(a.Entry.OriginalValues.ToObject()),
+                NewValues = a.Action == "Deleted" ? null : JsonSerializer.Serialize(a.Entry.CurrentValues.ToObject()),
+                CreatedAt = now,
+                UpdatedAt = now,
+                CreatedBy = CurrentUserId
+            }).ToList();
+
+            AuditLogs.AddRange(logs);
+            await base.SaveChangesAsync(cancellationToken);
+        }
+
+        return result;
+    }
+
+    private class AuditEntryInfo
+    {
+        public Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry<BaseEntity> Entry { get; set; } = null!;
+        public string Action { get; set; } = string.Empty;
+        public string EntityName { get; set; } = string.Empty;
     }
 }

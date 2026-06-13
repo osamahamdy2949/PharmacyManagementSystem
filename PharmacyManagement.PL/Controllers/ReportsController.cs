@@ -16,17 +16,20 @@ public class ReportsController : Controller
     private readonly ISupplierService _supplierService;
     private readonly IPurchaseService _purchaseService;
     private readonly InvoicePdfService _pdfService;
+    private readonly IDocumentGeneratorService _docService;
 
     public ReportsController(
         IReportService reportService,
         ISupplierService supplierService,
         IPurchaseService purchaseService,
-        InvoicePdfService pdfService)
+        InvoicePdfService pdfService,
+        IDocumentGeneratorService docService)
     {
         _reportService = reportService;
         _supplierService = supplierService;
         _purchaseService = purchaseService;
         _pdfService = pdfService;
+        _docService = docService;
     }
 
     public async Task<IActionResult> InventoryReport() =>
@@ -114,4 +117,35 @@ public class ReportsController : Controller
         var pdf = await _pdfService.GeneratePurchaseReceiptAsync(id);
         return pdf == null ? NotFound() : File(pdf, "application/pdf", $"RestockReceipt_{id}.pdf");
     }
+
+    // ========================== Export Endpoints ==========================
+
+    public async Task<IActionResult> ExportSalesExcel(ReportPeriod period = ReportPeriod.Monthly, DateTime? from = null, DateTime? to = null)
+    {
+        var sales = await _reportService.GetSalesReportAsync(period, from, to);
+        var bytes = _docService.GenerateSalesExcelReport(sales);
+        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"SalesReport_{DateTime.Now:yyyyMMdd}.xlsx");
+    }
+
+    public async Task<IActionResult> ExportSalesPdf(ReportPeriod period = ReportPeriod.Monthly, DateTime? from = null, DateTime? to = null)
+    {
+        var sales = await _reportService.GetSalesReportAsync(period, from, to);
+        var bytes = _docService.GenerateSalesPdfReport(sales, $"Sales Report — {period}");
+        return File(bytes, "application/pdf", $"SalesReport_{DateTime.Now:yyyyMMdd}.pdf");
+    }
+
+    public async Task<IActionResult> ExportInventoryExcel()
+    {
+        var inventory = await _reportService.GetInventoryReportAsync();
+        var bytes = _docService.GenerateInventoryExcelReport(inventory);
+        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"InventoryReport_{DateTime.Now:yyyyMMdd}.xlsx");
+    }
+
+    public async Task<IActionResult> ExportInventoryPdf()
+    {
+        var inventory = await _reportService.GetInventoryReportAsync();
+        var bytes = _docService.GenerateInventoryPdfReport(inventory, "Inventory Report");
+        return File(bytes, "application/pdf", $"InventoryReport_{DateTime.Now:yyyyMMdd}.pdf");
+    }
 }
+

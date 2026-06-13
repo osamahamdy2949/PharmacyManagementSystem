@@ -10,8 +10,8 @@ public class AuditLogConfiguration : IEntityTypeConfiguration<AuditLog>
     {
         builder.Property(a => a.Action).IsRequired().HasMaxLength(50);
         builder.Property(a => a.Entity).IsRequired().HasMaxLength(100);
-        builder.Property(a => a.OldValue).HasMaxLength(4000);
-        builder.Property(a => a.NewValue).HasMaxLength(4000);
+        builder.Property(x => x.OldValues).HasColumnType("nvarchar(max)");
+        builder.Property(x => x.NewValues).HasColumnType("nvarchar(max)");
         builder.Property(a => a.UserId).HasMaxLength(450);
     }
 }

@@ -29,8 +29,12 @@ public static class DependencyInjection
         services.AddScoped<ISalesService, SalesService>();
         services.AddScoped<ISalesReturnService, SalesReturnService>();
         services.AddScoped<IPurchaseReturnService, PurchaseReturnService>();
+        services.AddScoped<IPaymentService, PaymentService>();
+        services.AddScoped<IShiftService, ShiftService>();
+        services.AddScoped<IDashboardService, DashboardService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IReportService, ReportService>();
+        services.AddSingleton<IDocumentGeneratorService, DocumentGeneratorService>();
 
         return services;
     }

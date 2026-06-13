@@ -25,7 +25,14 @@ public class InventoryReportItemViewModel
     public string CategoryName { get; set; } = string.Empty;
     public int QuantityInStock { get; set; }
     public decimal SellingPrice { get; set; }
+    public decimal PurchasePrice { get; set; }
+    public string Unit { get; set; } = string.Empty;
     public DateTime ExpiryDate { get; set; }
+
+    // Aliases used by DocumentGeneratorService
+    public string MedicineName => TradeName;
+    public int CurrentStock => QuantityInStock;
+    public decimal TotalValueCost => PurchasePrice * QuantityInStock;
 }
 
 public class SalesReportItemViewModel
@@ -33,6 +40,8 @@ public class SalesReportItemViewModel
     public int InvoiceId { get; set; }
     public DateTime InvoiceDate { get; set; }
     public string CustomerName { get; set; } = string.Empty;
+    public string CashierName { get; set; } = string.Empty;
+    public string SaleType { get; set; } = "Cash";
     public decimal TotalAmount { get; set; }
 }
 
@@ -69,7 +78,7 @@ public class ProfitReportViewModel
 {
     public decimal TotalSales { get; set; }
     public decimal TotalPurchases { get; set; }
-    public decimal Profit => TotalSales - TotalPurchases;
+    public decimal Profit { get; set; }
     public DateTime? FromDate { get; set; }
     public DateTime? ToDate { get; set; }
 }
@@ -106,5 +115,6 @@ public enum ReportPeriod
     Daily,
     Weekly,
     Monthly,
+    Yearly,
     Custom
 }

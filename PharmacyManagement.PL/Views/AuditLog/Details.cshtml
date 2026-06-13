@@ -1,0 +1,59 @@
+@model PharmacyManagement.PL.Controllers.AuditLogViewModel
+@{
+    ViewData["Title"] = "Audit Log Details";
+}
+
+<div class="page-header d-flex justify-content-between align-items-center">
+    <h2><i class="bi bi-shield-lock"></i> Audit Log Details - #@Model.Id</h2>
+    <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back to Logs</a>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="content-card">
+            <h4>Summary</h4>
+            <table class="table">
+                <tr><th>Date</th><td>@DateDisplayHelper.FormatShortDateTime(Model.CreatedAt)</td></tr>
+                <tr><th>Action</th><td><span class="badge bg-@(Model.Action == "Added" ? "success" : Model.Action == "Deleted" ? "danger" : "warning")">@Model.Action</span></td></tr>
+                <tr><th>User</th><td>@Model.UserName</td></tr>
+                <tr><th>Entity</th><td>@Model.Entity</td></tr>
+                <tr><th>Entity ID</th><td>@Model.EntityId</td></tr>
+            </table>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="content-card">
+            <h4>Changes</h4>
+            <div class="table-responsive">
+                <table class="table table-pharmacy">
+                    <thead>
+                        <tr>
+                            <th>Field</th>
+                            <th>Old Value</th>
+                            <th>New Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Changes.Any())
+                        {
+                            @foreach (var change in Model.Changes)
+                            {
+                                <tr>
+                                    <td class="fw-bold">@change.Field</td>
+                                    <td>@change.OldValue</td>
+                                    <td>@change.NewValue</td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="3" class="text-muted text-center py-4">No field-level changes available.</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

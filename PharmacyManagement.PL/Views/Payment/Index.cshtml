@@ -1,0 +1,79 @@
+@model IEnumerable<PaymentViewModel>
+@{ ViewData["Title"] = "Payment History"; ViewData["PageTitle"] = "Payments"; }
+@{ var filter = ViewBag.Filter as PaymentHistoryFilterViewModel ?? new PaymentHistoryFilterViewModel(); }
+@{ var customers = ViewBag.Customers as IEnumerable<CustomerViewModel> ?? new List<CustomerViewModel>(); }
+
+<div class="content-card mb-4">
+    <form method="get" class="row g-3 align-items-end">
+        <div class="col-md-3">
+            <label asp-for="@filter.CustomerId" class="form-label">Customer</label>
+            <select asp-for="@filter.CustomerId" class="form-select" asp-items="@(new SelectList(customers, "Id", "Name", filter.CustomerId))">
+                <option value="">All Customers</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label asp-for="@filter.FromDate" class="form-label">From Date</label>
+            <input asp-for="@filter.FromDate" type="date" class="form-control" />
+        </div>
+        <div class="col-md-3">
+            <label asp-for="@filter.ToDate" class="form-label">To Date</label>
+            <input asp-for="@filter.ToDate" type="date" class="form-control" />
+        </div>
+        <div class="col-md-3">
+            <button type="submit" class="btn btn-primary w-100"><i class="bi bi-search me-2"></i> Search</button>
+        </div>
+    </form>
+</div>
+
+<div class="content-card">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">Payment Records</h5>
+        <a asp-action="RecordPayment" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i> Record Payment</a>
+    </div>
+
+    <table class="table table-pharmacy table-striped">
+        <thead>
+            <tr>
+                <th>Receipt #</th>
+                <th>Date</th>
+                <th>Customer</th>
+                <th>Amount</th>
+                <th>Method</th>
+                <th>Received By</th>
+                <th>Invoice Ref</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var p in Model)
+            {
+                <tr>
+                    <td>@p.Id</td>
+                    <td>
+                        <div class="d-flex flex-column">
+                            <span>@DisplayHelpers.Date(p.PaymentDate)</span>
+                            <small class="text-muted">@p.PaymentDate.ToString("t")</small>
+                        </div>
+                    </td>
+                    <td>
+                        <a asp-controller="Customer" asp-action="Profile" asp-route-id="@p.CustomerId" class="text-decoration-none fw-bold">@p.CustomerName</a>
+                    </td>
+                    <td class="fw-bold text-success">@DisplayHelpers.Egp(p.AmountPaid)</td>
+                    <td><span class="badge bg-info text-dark">@p.PaymentMethod</span></td>
+                    <td><span class="badge bg-light text-dark border"><i class="bi bi-person me-1"></i> @p.RecordedByUserName</span></td>
+                    <td>
+                        @if (p.SalesInvoiceId.HasValue)
+                        {
+                            <a asp-controller="SalesInvoice" asp-action="Details" asp-route-id="@p.SalesInvoiceId" class="text-decoration-none">
+                                <i class="bi bi-file-earmark-text me-1"></i> #@p.SalesInvoiceId
+                            </a>
+                        }
+                        else
+                        {
+                            <span class="text-muted fst-italic">General</span>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

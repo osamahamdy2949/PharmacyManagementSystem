@@ -1,6 +1,10 @@
 @model IEnumerable<SalesReportItemViewModel>
 @{ ViewData["Title"] = "Sales Report"; }
 <h2>Sales Report</h2>
+<div class="mb-3">
+    <a asp-action="ExportSalesExcel" asp-route-period="@ViewBag.Period" asp-route-from="@ViewBag.From" asp-route-to="@ViewBag.To" class="btn btn-success"><i class="bi bi-file-earmark-excel"></i> Export Excel</a>
+    <a asp-action="ExportSalesPdf" asp-route-period="@ViewBag.Period" asp-route-from="@ViewBag.From" asp-route-to="@ViewBag.To" class="btn btn-danger"><i class="bi bi-file-earmark-pdf"></i> Export PDF</a>
+</div>
 <table class="table table-striped">
     <thead><tr><th>Invoice</th><th>Date</th><th>Customer</th><th>Total</th></tr></thead>
     <tbody>

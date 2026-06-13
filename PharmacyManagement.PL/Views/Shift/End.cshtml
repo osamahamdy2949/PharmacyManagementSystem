@@ -1,0 +1,145 @@
+@model EndShiftViewModel
+@{ ViewData["Title"] = "End Shift"; ViewData["PageTitle"] = "Shift Management"; }
+@{ var summary = ViewBag.Summary as ShiftSummaryViewModel; }
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="content-card">
+            <div class="text-center mb-4">
+                <div class="icon-circle bg-danger-subtle text-danger mx-auto mb-3" style="width: 70px; height: 70px; font-size: 2rem;">
+                    <i class="bi bi-stop-circle"></i>
+                </div>
+                <h4 class="mb-1">End Current Shift</h4>
+                <p class="text-muted">Review totals and enter actual closing cash</p>
+            </div>
+
+            @if (summary != null)
+            {
+                <div class="row g-3 mb-4">
+                    <div class="col-sm-4">
+                        <div class="card bg-success-subtle border-0 text-center h-100 py-2">
+                            <small class="text-success-emphasis d-block">Cash Sales</small>
+                            <span class="fw-bold text-success">+@DisplayHelpers.Egp(summary.CashSales)</span>
+                        </div>
+                    </div>
+                    <div class="col-sm-4">
+                        <div class="card bg-info-subtle border-0 text-center h-100 py-2">
+                            <small class="text-info-emphasis d-block">Payments Recv</small>
+                            <span class="fw-bold text-info">+@DisplayHelpers.Egp(summary.TotalPaymentsReceived)</span>
+                        </div>
+                    </div>
+                    <div class="col-sm-4">
+                        <div class="card bg-danger-subtle border-0 text-center h-100 py-2">
+                            <small class="text-danger-emphasis d-block">Purchases</small>
+                            <span class="fw-bold text-danger">-@DisplayHelpers.Egp(summary.TotalPurchases)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert alert-primary d-flex justify-content-between align-items-center mb-4 border-primary border-opacity-50 border-2">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-calculator fs-4 text-primary me-3"></i>
+                        <span class="fs-5 text-primary-emphasis">System Expected Cash</span>
+                    </div>
+                    <h3 class="mb-0 text-primary fw-bold">@DisplayHelpers.Egp(summary.ExpectedCash)</h3>
+                </div>
+            }
+
+            <form asp-action="End" method="post" id="endShiftForm">
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+                <input type="hidden" asp-for="ShiftId" />
+                <input type="hidden" id="expectedCash" value="@(summary?.ExpectedCash ?? 0)" />
+
+                <div class="row align-items-center mb-4">
+                    <div class="col-md-7">
+                        <label asp-for="ClosingCash" class="form-label fw-bold">Actual Cash in Drawer <span class="text-danger">*</span></label>
+                        <div class="input-group input-group-lg">
+                            <span class="input-group-text bg-white text-dark"><i class="bi bi-cash me-2"></i>EGP</span>
+                            <input asp-for="ClosingCash" class="form-control fw-bold" type="number" step="0.01" min="0" id="actualCash" />
+                        </div>
+                        <span asp-validation-for="ClosingCash" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-5">
+                        <div class="card border-0 rounded-3 mt-3 mt-md-0" id="differenceCard" style="display: none;">
+                            <div class="card-body py-2 text-center">
+                                <small class="d-block mb-1 text-uppercase fw-bold" id="differenceLabel">Difference</small>
+                                <h4 class="mb-0 fw-bold" id="differenceValue">EGP 0.00</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label asp-for="Notes" class="form-label">Notes / Explanation</label>
+                    <textarea asp-for="Notes" class="form-control" rows="2" placeholder="Required if there is a cash difference..."></textarea>
+                    <span asp-validation-for="Notes" class="text-danger small"></span>
+                </div>
+
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <a asp-action="Current" class="btn btn-light px-4">Cancel</a>
+                    <button type="submit" class="btn btn-danger px-4" id="btnSubmit">
+                        <i class="bi bi-check2-circle me-2"></i> Confirm & End Shift
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        $(document).ready(function () {
+            var expected = parseFloat($('#expectedCash').val()) || 0;
+            
+            function calculateDiff() {
+                var actualText = $('#actualCash').val();
+                if (!actualText) {
+                    $('#differenceCard').hide();
+                    return;
+                }
+                
+                var actual = parseFloat(actualText) || 0;
+                var diff = actual - expected;
+                
+                var diffCard = $('#differenceCard');
+                var diffLabel = $('#differenceLabel');
+                var diffValue = $('#differenceValue');
+                
+                diffCard.show();
+                diffCard.removeClass('bg-success-subtle bg-danger-subtle bg-light border-success border-danger');
+                diffValue.removeClass('text-success text-danger text-muted');
+                diffLabel.removeClass('text-success-emphasis text-danger-emphasis text-muted');
+                
+                if (Math.abs(diff) < 0.01) {
+                    diffCard.addClass('bg-success-subtle');
+                    diffLabel.addClass('text-success-emphasis').text('PERFECT MATCH');
+                    diffValue.addClass('text-success').text('EGP 0.00');
+                } else if (diff > 0) {
+                    diffCard.addClass('bg-light');
+                    diffLabel.addClass('text-success').text('EXCESS (+)');
+                    diffValue.addClass('text-success').text('EGP ' + diff.toFixed(2));
+                } else {
+                    diffCard.addClass('bg-danger-subtle');
+                    diffLabel.addClass('text-danger-emphasis').text('SHORTAGE (-)');
+                    diffValue.addClass('text-danger').text('EGP ' + Math.abs(diff).toFixed(2));
+                }
+            }
+            
+            $('#actualCash').on('input', calculateDiff);
+            calculateDiff(); // Initial calculation if value exists
+            
+            $('#endShiftForm').submit(function(e) {
+                var actual = parseFloat($('#actualCash').val()) || 0;
+                var diff = Math.abs(actual - expected);
+                var notes = $('#Notes').val().trim();
+                
+                if (diff > 0.01 && !notes) {
+                    e.preventDefault();
+                    alert("Please provide notes to explain the cash difference.");
+                    $('#Notes').focus();
+                }
+            });
+        });
+    </script>
+}

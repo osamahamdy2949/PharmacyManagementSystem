@@ -62,6 +62,10 @@ public class Program
             options.LoginPath = "/Account/Login";
             options.AccessDeniedPath = "/Account/AccessDenied";
         });
+        builder.Services.Configure<SecurityStampValidatorOptions>(options =>
+        {
+            options.ValidationInterval = TimeSpan.Zero;
+        });
 
         var app = builder.Build();
 
@@ -77,6 +81,7 @@ public class Program
 
             var notifications = scope.ServiceProvider.GetRequiredService<INotificationService>();
             await notifications.GenerateStockAlertsAsync();
+            await CloseActiveSessionsAsync(context, userManager);
         }
 
         if (!app.Environment.IsDevelopment())
@@ -88,7 +93,16 @@ public class Program
         app.UseHttpsRedirection();
         app.UseRouting();
         app.UseAuthentication();
+        app.UseMiddleware<PharmacyManagement.PL.Middlewares.LoginTrackingMiddleware>();
         app.UseAuthorization();
+
+        app.Lifetime.ApplicationStopping.Register(() =>
+        {
+            using var scope = app.Services.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<PharmacyDbContext>();
+            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+            CloseActiveSessionsAsync(context, userManager).GetAwaiter().GetResult();
+        });
 
         app.MapStaticAssets();
         app.MapControllerRoute(
@@ -97,5 +111,37 @@ public class Program
             .WithStaticAssets();
 
         await app.RunAsync();
+    }
+
+    private static async Task CloseActiveSessionsAsync(PharmacyDbContext context, UserManager<ApplicationUser>? userManager = null)
+    {
+        var now = DateTime.UtcNow;
+        var activeSessions = await context.UserActivities
+            .Where(a => a.LogoutTime == null)
+            .ToListAsync();
+
+        var userIds = activeSessions
+            .Select(s => s.UserId)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct()
+            .ToList();
+
+        foreach (var session in activeSessions)
+        {
+            session.LogoutTime = now;
+        }
+
+        if (activeSessions.Count > 0)
+            await context.SaveChangesAsync();
+
+        if (userManager == null)
+            return;
+
+        foreach (var userId in userIds)
+        {
+            var user = await userManager.FindByIdAsync(userId);
+            if (user != null)
+                await userManager.UpdateSecurityStampAsync(user);
+        }
     }
 }

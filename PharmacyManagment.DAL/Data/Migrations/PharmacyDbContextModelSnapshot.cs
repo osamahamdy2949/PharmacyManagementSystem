@@ -260,13 +260,11 @@ namespace PharmacyManagement.DAL.Data.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
-                    b.Property<string>("NewValue")
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
+                    b.Property<string>("NewValues")
+                        .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("OldValue")
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
+                    b.Property<string>("OldValues")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -349,6 +347,9 @@ namespace PharmacyManagement.DAL.Data.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
+                    b.Property<DateTime?>("LastPaymentDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -358,6 +359,15 @@ namespace PharmacyManagement.DAL.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(11)
                         .HasColumnType("nvarchar(11)");
+
+                    b.Property<decimal>("RemainingBalance")
+                        .HasColumnType("decimal(12,2)");
+
+                    b.Property<decimal>("TotalDebt")
+                        .HasColumnType("decimal(12,2)");
+
+                    b.Property<decimal>("TotalPaid")
+                        .HasColumnType("decimal(12,2)");
 
                     b.Property<decimal>("TotalSpent")
                         .HasColumnType("decimal(12,2)");
@@ -638,6 +648,69 @@ namespace PharmacyManagement.DAL.Data.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Notifications");
+                });
+
+            modelBuilder.Entity("PharmacyManagement.DAL.Data.Entities.Payment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("AmountPaid")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("PaymentDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("PaymentMethod")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RecordedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int?>("SalesInvoiceId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("PaymentDate");
+
+                    b.HasIndex("SalesInvoiceId");
+
+                    b.ToTable("Payments");
                 });
 
             modelBuilder.Entity("PharmacyManagement.DAL.Data.Entities.PurchaseInvoice", b =>
@@ -921,6 +994,18 @@ namespace PharmacyManagement.DAL.Data.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
+                    b.Property<decimal>("PaidAmount")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<int>("PaymentStatus")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("RemainingAmount")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<int>("SaleType")
+                        .HasColumnType("int");
+
                     b.Property<decimal>("SubTotal")
                         .HasColumnType("decimal(10,2)");
 
@@ -939,6 +1024,8 @@ namespace PharmacyManagement.DAL.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CustomerId");
+
+                    b.HasIndex("PaymentStatus");
 
                     b.ToTable("SalesInvoices");
                 });
@@ -1118,6 +1205,88 @@ namespace PharmacyManagement.DAL.Data.Migrations
                     b.ToTable("SalesReturnItems");
                 });
 
+            modelBuilder.Entity("PharmacyManagement.DAL.Data.Entities.Shift", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal?>("CashDifference")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("CashSales")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal?>("ClosingCash")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("CreditSales")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("EndTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("NetCash")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("StartTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("TotalPaymentsReceived")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("TotalPurchases")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("TotalSales")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("StartTime");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Shifts");
+                });
+
             modelBuilder.Entity("PharmacyManagement.DAL.Data.Entities.StockTransaction", b =>
                 {
                     b.Property<int>("Id")
@@ -1242,6 +1411,71 @@ namespace PharmacyManagement.DAL.Data.Migrations
                     b.ToTable("Suppliers");
                 });
 
+            modelBuilder.Entity("PharmacyManagement.DAL.Data.Entities.UserActivity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FailureReason")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("IPAddress")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsSuccess")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("LoginTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("LogoutTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UserAgent")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LoginTime");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserActivities");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -1313,6 +1547,24 @@ namespace PharmacyManagement.DAL.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Medicine");
+                });
+
+            modelBuilder.Entity("PharmacyManagement.DAL.Data.Entities.Payment", b =>
+                {
+                    b.HasOne("PharmacyManagement.DAL.Data.Entities.Customer", "Customer")
+                        .WithMany("Payments")
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PharmacyManagement.DAL.Data.Entities.SalesInvoice", "SalesInvoice")
+                        .WithMany("Payments")
+                        .HasForeignKey("SalesInvoiceId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("SalesInvoice");
                 });
 
             modelBuilder.Entity("PharmacyManagement.DAL.Data.Entities.PurchaseInvoice", b =>
@@ -1482,6 +1734,17 @@ namespace PharmacyManagement.DAL.Data.Migrations
                     b.Navigation("SalesReturn");
                 });
 
+            modelBuilder.Entity("PharmacyManagement.DAL.Data.Entities.Shift", b =>
+                {
+                    b.HasOne("PharmacyManagement.DAL.Data.Entities.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("PharmacyManagement.DAL.Data.Entities.StockTransaction", b =>
                 {
                     b.HasOne("PharmacyManagement.DAL.Data.Entities.MedicineBatch", "MedicineBatch")
@@ -1500,6 +1763,17 @@ namespace PharmacyManagement.DAL.Data.Migrations
                     b.Navigation("MedicineBatch");
                 });
 
+            modelBuilder.Entity("PharmacyManagement.DAL.Data.Entities.UserActivity", b =>
+                {
+                    b.HasOne("PharmacyManagement.DAL.Data.Entities.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("PharmacyManagement.DAL.Data.Entities.Category", b =>
                 {
                     b.Navigation("Medicines");
@@ -1507,6 +1781,8 @@ namespace PharmacyManagement.DAL.Data.Migrations
 
             modelBuilder.Entity("PharmacyManagement.DAL.Data.Entities.Customer", b =>
                 {
+                    b.Navigation("Payments");
+
                     b.Navigation("SalesInvoices");
                 });
 
@@ -1534,6 +1810,8 @@ namespace PharmacyManagement.DAL.Data.Migrations
             modelBuilder.Entity("PharmacyManagement.DAL.Data.Entities.SalesInvoice", b =>
                 {
                     b.Navigation("Items");
+
+                    b.Navigation("Payments");
 
                     b.Navigation("SalesReturns");
                 });

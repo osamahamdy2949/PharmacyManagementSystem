@@ -18,4 +18,5 @@ public class CustomerViewModel
 
     public bool CanEditPhone { get; set; } = true;
     public bool CanEditName { get; set; }
+    public decimal RemainingBalance { get; set; }
 }

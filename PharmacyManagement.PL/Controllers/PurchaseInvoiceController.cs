@@ -18,19 +18,22 @@ public class PurchaseInvoiceController : Controller
     private readonly IMedicineService _medicineService;
     private readonly IValidator<CreatePurchaseInvoiceViewModel> _createValidator;
     private readonly InvoicePdfService _pdfService;
+    private readonly IShiftService _shiftService;
 
     public PurchaseInvoiceController(
         IPurchaseService purchaseService,
         ISupplierService supplierService,
         IMedicineService medicineService,
         IValidator<CreatePurchaseInvoiceViewModel> createValidator,
-        InvoicePdfService pdfService)
+        InvoicePdfService pdfService,
+        IShiftService shiftService)
     {
         _purchaseService = purchaseService;
         _supplierService = supplierService;
         _medicineService = medicineService;
         _createValidator = createValidator;
         _pdfService = pdfService;
+        _shiftService = shiftService;
     }
 
     public async Task<IActionResult> Index()
@@ -41,6 +44,13 @@ public class PurchaseInvoiceController : Controller
 
     public async Task<IActionResult> Create()
     {
+        var shift = await _shiftService.GetActiveShiftAsync();
+        if (shift == null)
+        {
+            TempData["Error"] = "You must start a shift before recording purchases.";
+            return RedirectToAction("Current", "Shift");
+        }
+
         await PopulateCreateLookupsAsync();
         var model = new CreatePurchaseInvoiceViewModel();
         return View(model);

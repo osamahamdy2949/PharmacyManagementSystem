@@ -7,11 +7,18 @@
         <a asp-action="DownloadReceipt" asp-route-id="@Model.Id" class="btn btn-pharmacy"><i class="bi bi-file-pdf"></i> Download receipt</a>
     </div>
 </div>
-<p>
+<p class="mb-4">
     <strong>Customer:</strong> @Model.CustomerName |
     <strong>Doctor:</strong> @(Model.DoctorName ?? "—") |
     <strong>Date:</strong> @DisplayHelpers.Date(Model.InvoiceDate) |
     <strong>Total:</strong> @DisplayHelpers.Egp(Model.TotalAmount)
+    <br/>
+    <strong>Type:</strong> @Model.SaleType |
+    <strong>Status:</strong> <span class="badge bg-@(Model.PaymentStatus == "Paid" ? "success" : Model.PaymentStatus == "PartiallyPaid" ? "warning" : "danger")">@Model.PaymentStatus</span>
+    @if (Model.SaleType == "Credit" && Model.PaymentStatus != "Paid")
+    {
+        <span> | <strong>Paid:</strong> @DisplayHelpers.Egp(Model.PaidAmount) | <strong class="text-danger">Remaining:</strong> @DisplayHelpers.Egp(Model.RemainingAmount)</span>
+    }
 </p>
 <div class="content-card">
 <table class="table table-pharmacy">

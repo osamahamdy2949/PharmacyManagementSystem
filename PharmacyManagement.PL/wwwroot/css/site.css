@@ -54,6 +54,11 @@ body {
   letter-spacing: -0.01em;
 }
 
+.app-shell {
+  height: 100vh;
+  overflow: hidden;
+}
+
 /* Typography Enhancements */
 h1, h2, h3, h4, h5, h6 {
   font-weight: 700;
@@ -92,6 +97,16 @@ h1, h2, h3, h4, h5, h6 {
 /* Sidebar Styles */
 .sidebar {
   z-index: 1040;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  overflow: hidden;
+}
+
+.sidebar-nav {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .sidebar .nav-link {

@@ -11,4 +11,6 @@ public interface ICustomerService
     Task<ServiceResult> UpdateAsync(CustomerViewModel model, bool canManage);
     Task<ServiceResult> DeleteAsync(int id);
     Task<ServiceResult<int>> GetOrCreateByNamePhoneAsync(string name, string? phone);
+    Task<CustomerProfileViewModel?> GetCustomerProfileAsync(int id);
+    Task<IReadOnlyList<CustomerDebtHistoryViewModel>> GetCustomerDebtHistoryAsync(int id);
 }

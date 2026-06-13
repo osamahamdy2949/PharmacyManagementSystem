@@ -15,21 +15,46 @@ public class SalesInvoiceController : Controller
     private readonly ISalesService _salesService;
     private readonly ICustomerService _customerService;
     private readonly InvoicePdfService _pdfService;
+    private readonly IShiftService _shiftService;
 
     public SalesInvoiceController(
         ISalesService salesService,
         ICustomerService customerService,
-        InvoicePdfService pdfService)
+        InvoicePdfService pdfService,
+        IShiftService shiftService)
     {
         _salesService = salesService;
         _customerService = customerService;
         _pdfService = pdfService;
+        _shiftService = shiftService;
     }
 
-    public async Task<IActionResult> Index() => View(await _salesService.GetAllAsync());
+    public async Task<IActionResult> Index([FromQuery] string? filter)
+    {
+        var invoices = (await _salesService.GetAllAsync()).ToList();
+        
+        if (!string.IsNullOrEmpty(filter))
+        {
+            if (filter.Equals("Cash", StringComparison.OrdinalIgnoreCase))
+                invoices = invoices.Where(i => i.SaleType == "Cash").ToList();
+            else if (filter.Equals("Partial", StringComparison.OrdinalIgnoreCase))
+                invoices = invoices.Where(i => i.PaymentStatus == "PartiallyPaid" || (i.SaleType == "Credit" && i.PaymentStatus == "Unpaid")).ToList();
+            
+            ViewBag.CurrentFilter = filter;
+        }
+
+        return View(invoices);
+    }
 
     public async Task<IActionResult> Pos()
     {
+        var shift = await _shiftService.GetActiveShiftAsync();
+        if (shift == null)
+        {
+            TempData["Error"] = "You must start a shift before accessing POS.";
+            return RedirectToAction("Current", "Shift");
+        }
+
         var customers = await _customerService.GetAllAsync();
         return View(new PosPageViewModel { Customers = customers });
     }

@@ -1,0 +1,40 @@
+@model IEnumerable<PharmacyManagement.PL.Controllers.AuditLogViewModel>
+@{
+    ViewData["Title"] = "Audit Logs";
+}
+
+<div class="page-header d-flex justify-content-between align-items-center">
+    <h2><i class="bi bi-shield-lock"></i> System Audit Logs</h2>
+</div>
+
+<div class="content-card">
+    <table class="table table-pharmacy">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>User</th>
+                <th>Action</th>
+                <th>Entity</th>
+                <th>Entity ID</th>
+                <th>Changes</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var log in Model)
+            {
+                <tr>
+                    <td>@DateDisplayHelper.FormatShortDateTime(log.CreatedAt)</td>
+                    <td>@log.UserName</td>
+                    <td><span class="badge bg-@(log.Action == "Added" ? "success" : log.Action == "Deleted" ? "danger" : "warning")">@log.Action</span></td>
+                    <td>@log.Entity</td>
+                    <td>@log.EntityId</td>
+                    <td>
+                        <a asp-action="Details" asp-route-id="@log.Id" class="btn btn-sm btn-outline-info">
+                            <i class="bi bi-eye"></i> View Details
+                        </a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

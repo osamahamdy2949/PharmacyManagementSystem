@@ -5,6 +5,7 @@ using PharmacyManagement.BLL.Services.Interfaces;
 using PharmacyManagement.BLL.ViewModels.PosViewModels;
 using PharmacyManagement.BLL.ViewModels.SalesInvoiceViewModels;
 using PharmacyManagement.DAL.Data.Entities;
+using PharmacyManagement.DAL.Data.Entities.Enums;
 using PharmacyManagement.DAL.Repositories.Interfaces;
 
 namespace PharmacyManagement.BLL.Services.Classes;
@@ -213,6 +214,11 @@ public class SalesService : ISalesService
             var subTotal = invoiceLines.Sum(i => _vatService.LineTotal(i.UnitPrice, i.Quantity, i.Discount));
             var (sub, vat, total) = _vatService.Calculate(subTotal);
 
+            var isCredit = model.SaleType == 1; // 1 = Credit, 0 = Cash
+            var paidAmount = isCredit ? model.PaidAmount : total;
+            var remainingAmount = Math.Max(0, total - paidAmount);
+            var status = remainingAmount <= 0 ? PaymentStatus.Paid : (paidAmount > 0 ? PaymentStatus.PartiallyPaid : PaymentStatus.Unpaid);
+
             var invoice = new SalesInvoice
             {
                 CustomerId = customerId,
@@ -221,6 +227,10 @@ public class SalesService : ISalesService
                 SubTotal = sub,
                 VatAmount = vat,
                 TotalAmount = total,
+                SaleType = isCredit ? SaleType.Credit : SaleType.Cash,
+                PaidAmount = paidAmount,
+                RemainingAmount = remainingAmount,
+                PaymentStatus = status,
                 CreatedByUserId = _currentUser.UserId,
                 Items = invoiceLines
             };
@@ -230,7 +240,14 @@ public class SalesService : ISalesService
 
             var customer = await _unitOfWork.GetRepository<Customer>().GetByIdAsync(customerId, tracking: true);
             if (customer != null)
+            {
                 customer.TotalSpent += total;
+                if (isCredit && remainingAmount > 0)
+                {
+                    customer.TotalDebt += remainingAmount;
+                    customer.RemainingBalance = customer.TotalDebt;
+                }
+            }
 
             await _unitOfWork.SaveChangesAsync();
             await transaction.CommitAsync();

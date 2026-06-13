@@ -1,0 +1,80 @@
+@model CustomerProfileViewModel
+@{ ViewData["Title"] = "Customer Profile"; ViewData["PageTitle"] = Model.Name; }
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="content-card h-100 text-center py-4">
+            <div class="avatar-circle bg-primary text-white mx-auto mb-3" style="width: 80px; height: 80px; font-size: 2.5rem; line-height: 80px; border-radius: 50%;">
+                @Model.Name.Substring(0, 1).ToUpper()
+            </div>
+            <h4 class="mb-1">@Model.Name</h4>
+            <p class="text-muted mb-3"><i class="bi bi-telephone"></i> @(string.IsNullOrEmpty(Model.Phone) ? "No Phone" : Model.Phone)</p>
+            
+            <div class="d-flex justify-content-center gap-2 mb-3">
+                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil me-1"></i> Edit</a>
+                @if (Model.TotalDebt > 0)
+                {
+                    <a asp-controller="Payment" asp-action="RecordPayment" asp-route-customerId="@Model.Id" class="btn btn-success btn-sm"><i class="bi bi-cash-stack me-1"></i> Receive Payment</a>
+                }
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <div class="row g-3 mb-3">
+            <div class="col-sm-6">
+                <div class="content-card border-start border-primary border-4 h-100 py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">Total Purchases</h6>
+                            <h3 class="mb-0 text-primary">@DisplayHelpers.Egp(Model.TotalSpent)</h3>
+                            <small class="text-muted">Across @Model.TotalInvoices invoices</small>
+                        </div>
+                        <div class="icon-circle bg-primary-subtle text-primary"><i class="bi bi-cart3"></i></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6">
+                <div class="content-card border-start border-danger border-4 h-100 py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">Outstanding Debt</h6>
+                            <h3 class="mb-0 text-danger">@DisplayHelpers.Egp(Model.TotalDebt)</h3>
+                            <a asp-action="DebtHistory" asp-route-id="@Model.Id" class="btn btn-link text-danger p-0 align-baseline text-decoration-none" style="font-size: 0.85rem">View Debt History <i class="bi bi-arrow-right"></i></a>
+                        </div>
+                        <div class="icon-circle bg-danger-subtle text-danger"><i class="bi bi-exclamation-circle"></i></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="content-card">
+            <h6 class="card-title text-muted mb-3">Debt Summary</h6>
+            <div class="row text-center">
+                <div class="col-4">
+                    <p class="text-muted mb-1 small">Total Paid</p>
+                    <h5 class="text-success mb-0">@DisplayHelpers.Egp(Model.TotalPaid)</h5>
+                </div>
+                <div class="col-4 border-start border-end">
+                    <p class="text-muted mb-1 small">Remaining</p>
+                    <h5 class="text-danger mb-0">@DisplayHelpers.Egp(Model.RemainingBalance)</h5>
+                </div>
+                <div class="col-4">
+                    <p class="text-muted mb-1 small">Last Payment</p>
+                    <h5 class="mb-0 text-dark">@(Model.LastPaymentDate.HasValue ? Model.LastPaymentDate.Value.ToString("dd MMM yyyy") : "-")</h5>
+                </div>
+            </div>
+            @if (Model.TotalDebt > 0)
+            {
+                <div class="progress mt-3" style="height: 6px;">
+                    @{
+                        var totalValue = Model.TotalPaid + Model.RemainingBalance;
+                        var percentage = totalValue > 0 ? (Model.TotalPaid / totalValue) * 100 : 0;
+                    }
+                    <div class="progress-bar bg-success" role="progressbar" style="width: @percentage%"></div>
+                    <div class="progress-bar bg-danger" role="progressbar" style="width: @(100 - percentage)%"></div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
