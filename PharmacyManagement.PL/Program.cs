@@ -2,7 +2,6 @@ using System.Globalization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Authorization;
-using Microsoft.EntityFrameworkCore;
 using PharmacyManagement.BLL;
 using PharmacyManagement.BLL.Common;
 using PharmacyManagement.BLL.Services.Interfaces;
@@ -11,7 +10,6 @@ using PharmacyManagement.DAL.Common;
 using PharmacyManagement.PL.Services;
 using PharmacyManagement.DAL.Data.DbContexts;
 using PharmacyManagement.DAL.Data.Entities;
-using PharmacyManagement.DAL.SeedingData;
 
 namespace PharmacyManagement.PL;
 
@@ -69,21 +67,6 @@ public class Program
 
         var app = builder.Build();
 
-        using (var scope = app.Services.CreateScope())
-        {
-            var context = scope.ServiceProvider.GetRequiredService<PharmacyDbContext>();
-            await context.Database.MigrateAsync();
-            await PharmacyDbSeeder.SeedAsync(context);
-
-            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-            var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-            await IdentitySeeder.SeedAsync(userManager, roleManager);
-
-            var notifications = scope.ServiceProvider.GetRequiredService<INotificationService>();
-            await notifications.GenerateStockAlertsAsync();
-            await CloseActiveSessionsAsync(context, userManager);
-        }
-
         if (!app.Environment.IsDevelopment())
         {
             app.UseExceptionHandler("/Home/Error");
@@ -96,14 +79,6 @@ public class Program
         app.UseMiddleware<PharmacyManagement.PL.Middlewares.LoginTrackingMiddleware>();
         app.UseAuthorization();
 
-        app.Lifetime.ApplicationStopping.Register(() =>
-        {
-            using var scope = app.Services.CreateScope();
-            var context = scope.ServiceProvider.GetRequiredService<PharmacyDbContext>();
-            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-            CloseActiveSessionsAsync(context, userManager).GetAwaiter().GetResult();
-        });
-
         app.MapStaticAssets();
         app.MapControllerRoute(
             name: "default",
@@ -111,37 +86,5 @@ public class Program
             .WithStaticAssets();
 
         await app.RunAsync();
-    }
-
-    private static async Task CloseActiveSessionsAsync(PharmacyDbContext context, UserManager<ApplicationUser>? userManager = null)
-    {
-        var now = DateTime.UtcNow;
-        var activeSessions = await context.UserActivities
-            .Where(a => a.LogoutTime == null)
-            .ToListAsync();
-
-        var userIds = activeSessions
-            .Select(s => s.UserId)
-            .Where(id => !string.IsNullOrWhiteSpace(id))
-            .Distinct()
-            .ToList();
-
-        foreach (var session in activeSessions)
-        {
-            session.LogoutTime = now;
-        }
-
-        if (activeSessions.Count > 0)
-            await context.SaveChangesAsync();
-
-        if (userManager == null)
-            return;
-
-        foreach (var userId in userIds)
-        {
-            var user = await userManager.FindByIdAsync(userId);
-            if (user != null)
-                await userManager.UpdateSecurityStampAsync(user);
-        }
     }
 }

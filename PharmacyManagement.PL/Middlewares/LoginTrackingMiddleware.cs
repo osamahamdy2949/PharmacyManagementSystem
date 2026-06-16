@@ -13,10 +13,12 @@ public class LoginTrackingMiddleware
         _next = next;
     }
 
-    public async Task InvokeAsync(HttpContext context, PharmacyDbContext dbContext, UserManager<ApplicationUser> userManager)
+    public async Task InvokeAsync(HttpContext context)
     {
         if (context.Request.Path.StartsWithSegments("/Account/Logout") && context.Request.Method == "POST")
         {
+            var dbContext = context.RequestServices.GetRequiredService<PharmacyDbContext>();
+            var userManager = context.RequestServices.GetRequiredService<UserManager<ApplicationUser>>();
             var user = await userManager.GetUserAsync(context.User);
             if (user != null)
             {
@@ -35,10 +37,9 @@ public class LoginTrackingMiddleware
             }
 
             await _next(context);
+            return;
         }
-        else
-        {
-            await _next(context);
-        }
+
+        await _next(context);
     }
 }

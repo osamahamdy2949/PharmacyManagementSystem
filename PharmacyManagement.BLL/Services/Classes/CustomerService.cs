@@ -32,9 +32,7 @@ public class CustomerService : ICustomerService
     public async Task<CustomerViewModel?> GetByIdAsync(int id)
     {
         var item = await _unitOfWork.GetRepository<Customer>().GetByIdAsync(id);
-        if (item == null) return null;
-        var vm = _mapper.Map<CustomerViewModel>(item);
-        return vm;
+        return item == null ? null : _mapper.Map<CustomerViewModel>(item);
     }
 
     public async Task<ServiceResult> CreateAsync(CustomerViewModel model)
@@ -85,10 +83,12 @@ public class CustomerService : ICustomerService
         if (string.IsNullOrWhiteSpace(trimmedName))
             return ServiceResult<int>.Fail("Customer name is required.");
 
+        var normalizedName = trimmedName.ToUpper();
+        var normalizedPhone = phone?.Trim();
         var existing = await _unitOfWork.GetRepository<Customer>().Query()
             .FirstOrDefaultAsync(c =>
-                c.Name.ToLower() == trimmedName.ToLower() &&
-                (string.IsNullOrWhiteSpace(phone) || c.Phone == phone));
+                c.Name.ToUpper() == normalizedName &&
+                (string.IsNullOrWhiteSpace(normalizedPhone) || c.Phone == normalizedPhone));
 
         if (existing != null)
             return ServiceResult<int>.Ok(existing.Id);
@@ -96,7 +96,7 @@ public class CustomerService : ICustomerService
         var customer = new Customer
         {
             Name = trimmedName,
-            Phone = phone?.Trim() ?? string.Empty
+            Phone = normalizedPhone ?? string.Empty
         };
 
         _unitOfWork.GetRepository<Customer>().Add(customer);
@@ -109,9 +109,10 @@ public class CustomerService : ICustomerService
         var item = await _unitOfWork.GetRepository<Customer>().Query()
             .Include(c => c.SalesInvoices)
             .FirstOrDefaultAsync(c => c.Id == id);
-            
-        if (item == null) return null;
-        
+
+        if (item == null)
+            return null;
+
         var vm = _mapper.Map<CustomerProfileViewModel>(item);
         vm.TotalInvoices = item.SalesInvoices.Count;
         return vm;
@@ -123,7 +124,7 @@ public class CustomerService : ICustomerService
             .Where(s => s.CustomerId == id && s.SaleType == PharmacyManagement.DAL.Data.Entities.Enums.SaleType.Credit)
             .OrderByDescending(s => s.InvoiceDate)
             .ToListAsync();
-            
+
         return invoices.Select(s => new CustomerDebtHistoryViewModel
         {
             InvoiceId = s.Id,

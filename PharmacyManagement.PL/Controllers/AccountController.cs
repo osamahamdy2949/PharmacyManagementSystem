@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using PharmacyManagement.BLL.Services.Interfaces;
 using PharmacyManagement.DAL.Data.DbContexts;
 using PharmacyManagement.DAL.Data.Entities;
 
@@ -13,15 +14,18 @@ public class AccountController : Controller
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly PharmacyDbContext _dbContext;
+    private readonly INotificationService _notificationService;
 
     public AccountController(
         SignInManager<ApplicationUser> signInManager,
         UserManager<ApplicationUser> userManager,
-        PharmacyDbContext dbContext)
+        PharmacyDbContext dbContext,
+        INotificationService notificationService)
     {
         _signInManager = signInManager;
         _userManager = userManager;
         _dbContext = dbContext;
+        _notificationService = notificationService;
     }
 
     [AllowAnonymous]
@@ -51,6 +55,7 @@ public class AccountController : Controller
                 await _signInManager.SignInAsync(user, model.RememberMe);
                 await CloseActiveSessionsAsync(user.Id);
                 await RecordLoginAsync(user);
+                await _notificationService.GenerateStockAlertsAsync();
                 return RedirectToLocal(returnUrl);
             }
         }

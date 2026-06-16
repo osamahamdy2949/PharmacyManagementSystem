@@ -267,18 +267,26 @@ public class ReportService : IReportService
     public async Task<DashboardViewModel> GetDashboardAsync()
     {
         var today = DateTime.Today;
+        var tomorrow = today.AddDays(1);
         var monthStart = new DateTime(today.Year, today.Month, 1);
         var nearExpiry = today.AddDays(ValidationConstants.NearExpiryDays);
         var todayUtc = DateTime.UtcNow.Date;
 
         var todaySales = await _unitOfWork.GetRepository<SalesInvoice>().Query()
-            .Where(s => s.InvoiceDate == today).SumAsync(s => s.TotalAmount);
+            .Where(s => s.InvoiceDate >= today && s.InvoiceDate < tomorrow)
+            .SumAsync(s => s.TotalAmount);
+
         var monthlySales = await _unitOfWork.GetRepository<SalesInvoice>().Query()
-            .Where(s => s.InvoiceDate >= monthStart && s.InvoiceDate <= today).SumAsync(s => s.TotalAmount);
+            .Where(s => s.InvoiceDate >= monthStart && s.InvoiceDate < tomorrow)
+            .SumAsync(s => s.TotalAmount);
+
         var todayPurchases = await _unitOfWork.GetRepository<PurchaseInvoice>().Query()
-            .Where(p => p.InvoiceDate == today).SumAsync(p => p.TotalAmount);
+            .Where(p => p.InvoiceDate >= today && p.InvoiceDate < tomorrow)
+            .SumAsync(p => p.TotalAmount);
+
         var monthlyPurchases = await _unitOfWork.GetRepository<PurchaseInvoice>().Query()
-            .Where(p => p.InvoiceDate >= monthStart && p.InvoiceDate <= today).SumAsync(p => p.TotalAmount);
+            .Where(p => p.InvoiceDate >= monthStart && p.InvoiceDate < tomorrow)
+            .SumAsync(p => p.TotalAmount);
 
         var batches = await _unitOfWork.GetRepository<MedicineBatch>().Query()
             .Include(b => b.Medicine)

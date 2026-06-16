@@ -12,6 +12,8 @@ namespace PharmacyManagement.BLL.Services.Classes;
 
 public class SalesService : ISalesService
 {
+    private const string UnknownUserDisplayName = "System / Unknown";
+
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
     private readonly IStockService _stockService;
@@ -45,27 +47,7 @@ public class SalesService : ISalesService
             .ToListAsync();
 
         var viewModels = _mapper.Map<List<SalesInvoiceViewModel>>(items);
-
-        var userIds = items.Select(i => i.CreatedByUserId).Where(id => id != null).Distinct().ToList();
-        if (userIds.Any())
-        {
-            var users = await _unitOfWork.Context.Set<ApplicationUser>()
-                .Where(u => userIds.Contains(u.Id))
-                .ToDictionaryAsync(u => u.Id, u => u.FullName);
-
-            for (int i = 0; i < items.Count; i++)
-            {
-                if (items[i].CreatedByUserId != null && users.TryGetValue(items[i].CreatedByUserId!, out var fullName))
-                {
-                    viewModels[i].CreatedByUserName = fullName;
-                }
-                else
-                {
-                    viewModels[i].CreatedByUserName = "System / Unknown";
-                }
-            }
-        }
-
+        await AddCreatedByUserNamesAsync(items, viewModels);
         return viewModels;
     }
 
@@ -88,12 +70,12 @@ public class SalesService : ISalesService
 
         if (!string.IsNullOrWhiteSpace(query))
         {
-            var term = query.Trim().ToLower();
+            var term = query.Trim().ToUpper();
             batchQuery = batchQuery.Where(b =>
-                b.Medicine.TradeName.ToLower().Contains(term) ||
-                b.Medicine.ScientificName.ToLower().Contains(term) ||
-                b.Dose.ToLower().Contains(term) ||
-                (b.Barcode != null && b.Barcode.ToLower() == term));
+                b.Medicine.TradeName.ToUpper().Contains(term) ||
+                b.Medicine.ScientificName.ToUpper().Contains(term) ||
+                b.Dose.ToUpper().Contains(term) ||
+                (b.Barcode != null && b.Barcode.ToUpper() == term));
         }
 
         var batches = await batchQuery
@@ -270,6 +252,32 @@ public class SalesService : ISalesService
         {
             await transaction.RollbackAsync();
             throw;
+        }
+    }
+
+    private async Task AddCreatedByUserNamesAsync(
+        IReadOnlyList<SalesInvoice> invoices,
+        IReadOnlyList<SalesInvoiceViewModel> viewModels)
+    {
+        var userIds = invoices
+            .Select(invoice => invoice.CreatedByUserId)
+            .Where(id => id != null)
+            .Distinct()
+            .ToList();
+
+        if (userIds.Count == 0)
+            return;
+
+        var users = await _unitOfWork.Context.Set<ApplicationUser>()
+            .Where(user => userIds.Contains(user.Id))
+            .ToDictionaryAsync(user => user.Id, user => user.FullName);
+
+        for (var i = 0; i < invoices.Count; i++)
+        {
+            var userId = invoices[i].CreatedByUserId;
+            viewModels[i].CreatedByUserName = userId != null && users.TryGetValue(userId, out var fullName)
+                ? fullName
+                : UnknownUserDisplayName;
         }
     }
 }
