@@ -52,7 +52,7 @@ public class AccountController : Controller
             if (result.Succeeded)
             {
                 await _userManager.UpdateSecurityStampAsync(user);
-                await _signInManager.SignInAsync(user, model.RememberMe);
+                await _signInManager.SignInAsync(user, isPersistent: false);
                 await CloseActiveSessionsAsync(user.Id);
                 await RecordLoginAsync(user);
                 await _notificationService.GenerateStockAlertsAsync();
@@ -78,7 +78,11 @@ public class AccountController : Controller
     }
 
     [AllowAnonymous]
-    public IActionResult AccessDenied() => View();
+    public IActionResult AccessDenied(string? returnUrl = null)
+    {
+        ViewData["ReturnUrl"] = returnUrl;
+        return View();
+    }
 
     private IActionResult RedirectToLocal(string? returnUrl)
     {

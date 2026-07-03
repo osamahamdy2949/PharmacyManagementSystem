@@ -13,15 +13,18 @@ public class PaymentController : Controller
     private readonly IPaymentService _paymentService;
     private readonly ICustomerService _customerService;
     private readonly ISalesService _salesService;
+    private readonly IShiftService _shiftService;
 
     public PaymentController(
         IPaymentService paymentService, 
         ICustomerService customerService,
-        ISalesService salesService)
+        ISalesService salesService,
+        IShiftService shiftService)
     {
         _paymentService = paymentService;
         _customerService = customerService;
         _salesService = salesService;
+        _shiftService = shiftService;
     }
 
     public async Task<IActionResult> Index(PaymentHistoryFilterViewModel filter)
@@ -34,6 +37,12 @@ public class PaymentController : Controller
 
     public async Task<IActionResult> RecordPayment(int? customerId, int? invoiceId)
     {
+        if (await _shiftService.GetActiveShiftAsync() == null)
+        {
+            TempData["Error"] = "You must start a shift before recording payments.";
+            return RedirectToAction("Current", "Shift");
+        }
+
         var model = new RecordPaymentViewModel();
 
         if (customerId.HasValue)

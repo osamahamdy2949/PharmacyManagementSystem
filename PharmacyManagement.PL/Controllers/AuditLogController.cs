@@ -23,7 +23,6 @@ public class AuditLogController : Controller
     {
         var logs = await _context.AuditLogs
             .OrderByDescending(x => x.CreatedAt)
-            .Take(100)
             .ToListAsync();
             
         var userIds = logs.Select(l => l.UserId).Where(u => !string.IsNullOrEmpty(u)).Distinct().ToList();

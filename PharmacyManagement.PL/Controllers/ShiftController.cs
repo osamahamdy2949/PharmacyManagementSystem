@@ -57,11 +57,17 @@ public class ShiftController : Controller
         return View(summary);
     }
 
-    public async Task<IActionResult> End()
+    public async Task<IActionResult> End(int? id)
     {
-        var summary = await _shiftService.GetCurrentShiftSummaryAsync();
+        var summary = id.HasValue
+            ? await _shiftService.GetShiftSummaryAsync(id.Value)
+            : await _shiftService.GetCurrentShiftSummaryAsync();
+
         if (summary == null)
         {
+            if (id.HasValue)
+                return Forbid();
+
             TempData["Error"] = "No active shift found.";
             return RedirectToAction("Index", "Home");
         }
@@ -82,7 +88,7 @@ public class ShiftController : Controller
     {
         if (!ModelState.IsValid)
         {
-            ViewBag.Summary = await _shiftService.GetCurrentShiftSummaryAsync();
+            ViewBag.Summary = await _shiftService.GetShiftSummaryAsync(model.ShiftId);
             return View(model);
         }
 
@@ -90,7 +96,7 @@ public class ShiftController : Controller
         if (!result.Success)
         {
             ModelState.AddServiceErrors(result);
-            ViewBag.Summary = await _shiftService.GetCurrentShiftSummaryAsync();
+            ViewBag.Summary = await _shiftService.GetShiftSummaryAsync(model.ShiftId);
             return View(model);
         }
 

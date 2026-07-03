@@ -1,5 +1,6 @@
 @model IEnumerable<ShiftViewModel>
 @{ ViewData["Title"] = "Shift History"; ViewData["PageTitle"] = "Shift Records"; }
+@{ var isAdmin = User.IsInRole(RoleNames.Administrator); }
 
 <div class="content-card mb-4">
     <form method="get" class="row g-3 align-items-end">
@@ -21,12 +22,12 @@
     <table class="table table-pharmacy table-striped">
         <thead>
             <tr>
-                <th>Date / Time</th>
                 <th>Cashier</th>
-                <th>Status</th>
+                <th>Date</th>
                 <th>Sales</th>
                 <th>Expected</th>
                 <th>Actual</th>
+                <th>Status</th>
                 <th>Diff</th>
                 <th></th>
             </tr>
@@ -35,22 +36,12 @@
             @foreach (var s in Model)
             {
                 <tr>
+                    <td><span class="badge bg-light text-dark border"><i class="bi bi-person me-1"></i> @s.UserName</span></td>
                     <td>
                         <div class="d-flex flex-column">
                             <span>@DisplayHelpers.Date(s.StartTime)</span>
                             <small class="text-muted">@s.StartTime.ToString("t") - @(s.EndTime?.ToString("t") ?? "Now")</small>
                         </div>
-                    </td>
-                    <td><span class="badge bg-light text-dark border"><i class="bi bi-person me-1"></i> @s.UserName</span></td>
-                    <td>
-                        @if (s.IsActive)
-                        {
-                            <span class="badge bg-primary">Active</span>
-                        }
-                        else
-                        {
-                            <span class="badge bg-secondary">Closed</span>
-                        }
                     </td>
                     <td>@DisplayHelpers.Egp(s.TotalSales)</td>
                     <td>@DisplayHelpers.Egp(s.SystemExpectedCash)</td>
@@ -62,6 +53,16 @@
                         else
                         {
                             <span class="text-muted">-</span>
+                        }
+                    </td>
+                    <td>
+                        @if (s.IsActive)
+                        {
+                            <span class="badge bg-primary">Active</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary">Closed</span>
                         }
                     </td>
                     <td>
@@ -86,7 +87,13 @@
                         }
                     </td>
                     <td>
-                        <a asp-action="Details" asp-route-id="@s.Id" class="btn btn-sm btn-outline-info">Details</a>
+                        <div class="d-flex gap-2">
+                            <a asp-action="Details" asp-route-id="@s.Id" class="btn btn-sm btn-outline-info">Details</a>
+                            @if (isAdmin && s.IsActive)
+                            {
+                                <a asp-action="End" asp-route-id="@s.Id" class="btn btn-sm btn-outline-danger">End</a>
+                            }
+                        </div>
                     </td>
                 </tr>
             }

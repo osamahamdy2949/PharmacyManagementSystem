@@ -9,6 +9,7 @@ public interface IShiftService
     Task<ServiceResult> EndShiftAsync(EndShiftViewModel model);
     Task<ShiftViewModel?> GetActiveShiftAsync();
     Task<ShiftSummaryViewModel?> GetCurrentShiftSummaryAsync();
+    Task<ShiftSummaryViewModel?> GetShiftSummaryAsync(int shiftId);
     Task<IReadOnlyList<ShiftViewModel>> GetShiftHistoryAsync(DateTime? from, DateTime? to);
     Task<ShiftViewModel?> GetByIdAsync(int id);
 }

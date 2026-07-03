@@ -91,7 +91,7 @@ public class PharmacyDbContext : IdentityDbContext<ApplicationUser>
             if (entry.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
             {
                 var entityName = entry.Entity.GetType().Name;
-                if (entityName is nameof(AuditLog) or nameof(Notification) or nameof(StockTransaction) or nameof(Payment) or nameof(Shift) or nameof(UserActivity))
+                if (entityName == nameof(AuditLog) || IsBuyingOrSellingOperation(entityName))
                     continue;
 
                 auditEntries.Add(new AuditEntryInfo 
@@ -126,6 +126,17 @@ public class PharmacyDbContext : IdentityDbContext<ApplicationUser>
 
         return result;
     }
+
+    private static bool IsBuyingOrSellingOperation(string entityName) =>
+        entityName is nameof(StockTransaction)
+            or nameof(PurchaseInvoice)
+            or nameof(PurchaseInvoiceItem)
+            or nameof(PurchaseReturn)
+            or nameof(PurchaseReturnItem)
+            or nameof(SalesInvoice)
+            or nameof(SalesInvoiceItem)
+            or nameof(SalesReturn)
+            or nameof(SalesReturnItem);
 
     private class AuditEntryInfo
     {

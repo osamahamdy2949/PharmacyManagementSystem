@@ -124,6 +124,11 @@ public class SalesService : ISalesService
 
     public async Task<ServiceResult<PosCheckoutResultViewModel>> CheckoutPosAsync(PosCheckoutViewModel model)
     {
+        var activeShiftExists = await _unitOfWork.GetRepository<Shift>().Query()
+            .AnyAsync(s => s.UserId == _currentUser.UserId && s.IsActive);
+        if (!activeShiftExists)
+            return ServiceResult<PosCheckoutResultViewModel>.Fail("You must start a shift before completing a sale.");
+
         if (model.Items == null || model.Items.Count == 0)
             return ServiceResult<PosCheckoutResultViewModel>.Fail("Cannot checkout with an empty invoice.");
 

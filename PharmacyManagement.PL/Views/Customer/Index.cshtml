@@ -3,9 +3,12 @@
 @{
     ViewData["Title"] = "Customers";
     ViewData["PageTitle"] = "Customers";
-    ViewData["AddUrl"] = Url.Action("Create");
-    ViewData["AddText"] = "Add Customer";
     var canManage = User.IsInRole(RoleNames.Administrator) || User.IsInRole(RoleNames.Pharmacist);
+    if (canManage)
+    {
+        ViewData["AddUrl"] = Url.Action("Create");
+        ViewData["AddText"] = "Add Customer";
+    }
 }
 <partial name="_PageHeader" />
 <div class="content-card">

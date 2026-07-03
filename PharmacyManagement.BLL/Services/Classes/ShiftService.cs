@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using PharmacyManagement.BLL.Common;
 using PharmacyManagement.BLL.Services.Interfaces;
 using PharmacyManagement.BLL.ViewModels.ShiftViewModels;
+using PharmacyManagement.DAL.Common;
 using PharmacyManagement.DAL.Data.Entities;
 using PharmacyManagement.DAL.Data.Entities.Enums;
 using PharmacyManagement.DAL.Repositories.Interfaces;
@@ -43,9 +44,15 @@ public class ShiftService : IShiftService
 
     public async Task<ServiceResult> EndShiftAsync(EndShiftViewModel model)
     {
-        var activeShift = await GetActiveShiftEntityAsync();
-        if (activeShift == null || activeShift.Id != model.ShiftId)
+        var activeShift = await _unitOfWork.GetRepository<Shift>().Query()
+            .FirstOrDefaultAsync(s => s.Id == model.ShiftId && s.IsActive);
+
+        if (activeShift == null)
             return ServiceResult.Fail("Invalid shift or shift is already closed.");
+
+        var isOwnShift = activeShift.UserId == _currentUser.UserId;
+        if (!isOwnShift && !_currentUser.IsInRole(RoleNames.Administrator))
+            return ServiceResult.Fail("Only administrators can end another user's shift.");
 
         var summary = await CalculateShiftTotalsAsync(activeShift.UserId, activeShift.StartTime, DateTime.UtcNow);
         
@@ -91,6 +98,25 @@ public class ShiftService : IShiftService
         var activeShift = await GetActiveShiftEntityAsync();
         if (activeShift == null) return null;
 
+        return await BuildShiftSummaryAsync(activeShift);
+    }
+
+    public async Task<ShiftSummaryViewModel?> GetShiftSummaryAsync(int shiftId)
+    {
+        var shift = await _unitOfWork.GetRepository<Shift>().Query()
+            .FirstOrDefaultAsync(s => s.Id == shiftId && s.IsActive);
+
+        if (shift == null)
+            return null;
+
+        if (shift.UserId != _currentUser.UserId && !_currentUser.IsInRole(RoleNames.Administrator))
+            return null;
+
+        return await BuildShiftSummaryAsync(shift);
+    }
+
+    private async Task<ShiftSummaryViewModel> BuildShiftSummaryAsync(Shift activeShift)
+    {
         var user = await _unitOfWork.Context.Set<ApplicationUser>().FirstOrDefaultAsync(u => u.Id == activeShift.UserId);
         var totals = await CalculateShiftTotalsAsync(activeShift.UserId, activeShift.StartTime, DateTime.UtcNow);
 

@@ -14,21 +14,21 @@
 </div>
 <div class="content-card">
 <table class="table table-pharmacy table-striped">
-    <thead><tr><th>#</th><th>Date</th><th>Customer</th><th>Cashier</th><th>Total</th><th>Status</th><th></th></tr></thead>
+    <thead><tr><th>#</th><th>Customer</th><th>Cashier</th><th>Total</th><th>Date</th><th>Status</th><th></th></tr></thead>
     <tbody>
     @foreach (var s in Model)
     {
         <tr>
             <td>@s.Id</td>
+            <td>@s.CustomerName</td>
+            <td><span class="badge bg-light text-dark border"><i class="bi bi-person me-1"></i> @s.CreatedByUserName</span></td>
+            <td>@DisplayHelpers.Egp(s.TotalAmount)</td>
             <td>
                 <div class="d-flex flex-column">
                     <span>@DisplayHelpers.Date(s.InvoiceDate)</span>
                     <small class="text-muted">@s.InvoiceDate.ToString("t")</small>
                 </div>
             </td>
-            <td>@s.CustomerName</td>
-            <td><span class="badge bg-light text-dark border"><i class="bi bi-person me-1"></i> @s.CreatedByUserName</span></td>
-            <td>@DisplayHelpers.Egp(s.TotalAmount)</td>
             <td>
                 @if (s.SaleType == "Cash")
                 {

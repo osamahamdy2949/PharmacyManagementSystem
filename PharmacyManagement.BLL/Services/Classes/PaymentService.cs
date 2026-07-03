@@ -35,6 +35,11 @@ public class PaymentService : IPaymentService
         var validation = await ValidationHelper.ValidateAsync(_validator, model);
         if (validation != null) return validation;
 
+        var activeShiftExists = await _unitOfWork.GetRepository<Shift>().Query()
+            .AnyAsync(s => s.UserId == _currentUser.UserId && s.IsActive);
+        if (!activeShiftExists)
+            return ServiceResult.Fail("You must start a shift before recording payments.");
+
         await using var transaction = await _unitOfWork.Context.Database.BeginTransactionAsync();
         try
         {
