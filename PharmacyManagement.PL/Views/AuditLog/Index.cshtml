@@ -1,40 +1,58 @@
 @model IEnumerable<PharmacyManagement.PL.Controllers.AuditLogViewModel>
 @{
     ViewData["Title"] = "Audit Logs";
+    ViewData["PageTitle"] = "System Audit Logs";
+    ViewData["PageIcon"] = "bi-shield-lock";
 }
+<partial name="_PageHeader" />
 
-<div class="page-header d-flex justify-content-between align-items-center">
-    <h2><i class="bi bi-shield-lock"></i> System Audit Logs</h2>
-</div>
-
-<div class="content-card">
-    <table class="table table-pharmacy">
-        <thead>
-            <tr>
-                <th>User</th>
-                <th>Action</th>
-                <th>Entity</th>
-                <th>Entity ID</th>
-                <th>Date</th>
-                <th>Changes</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var log in Model)
-            {
+<div class="content-card p-0 overflow-hidden shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-enterprise mb-0">
+            <thead>
                 <tr>
-                    <td>@log.UserName</td>
-                    <td><span class="badge bg-@(log.Action == "Added" ? "success" : log.Action == "Deleted" ? "danger" : "warning")">@log.Action</span></td>
-                    <td>@log.Entity</td>
-                    <td>@log.EntityId</td>
-                    <td>@DateDisplayHelper.FormatShortDateTime(log.CreatedAt)</td>
-                    <td>
-                        <a asp-action="Details" asp-route-id="@log.Id" class="btn btn-sm btn-outline-info">
-                            <i class="bi bi-eye"></i> View Details
-                        </a>
-                    </td>
+                    <th>User</th>
+                    <th class="text-center">Action</th>
+                    <th>Target Entity</th>
+                    <th>Date & Time</th>
+                    <th class="text-center">View Changes</th>
                 </tr>
-            }
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                @if(!Model.Any()) {
+                    <tr><td colspan="5" class="text-center p-5 text-muted"><i class="bi bi-shield-check fs-2 d-block mb-2 opacity-50"></i>No audit logs recorded yet.</td></tr>
+                }
+                @foreach (var log in Model)
+                {
+                    <tr class="bg-white">
+                        <td class="fw-bold text-dark">
+                            <span class="badge bg-light text-dark border px-2 py-1"><i class="bi bi-person me-1"></i> @log.UserName</span>
+                        </td>
+                        <td class="text-center">
+                            @if(log.Action == "Added") {
+                                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i class="bi bi-plus-circle me-1"></i> Added</span>
+                            } else if(log.Action == "Deleted") {
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1"><i class="bi bi-trash me-1"></i> Deleted</span>
+                            } else {
+                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1"><i class="bi bi-pencil me-1"></i> Modified</span>
+                            }
+                        </td>
+                        <td>
+                            <span class="d-block fw-bold text-dark">@log.Entity</span>
+                            <small class="text-muted">ID: @log.EntityId</small>
+                        </td>
+                        <td>
+                            <span class="d-block text-dark fw-medium">@DateDisplayHelper.FormatShortDateTime(log.CreatedAt).Split(' ')[0]</span>
+                            <small class="text-muted">@DateDisplayHelper.FormatShortDateTime(log.CreatedAt).Split(' ')[1]</small>
+                        </td>
+                        <td class="text-center">
+                            <a asp-action="Details" asp-route-id="@log.Id" class="btn btn-sm btn-light border shadow-sm text-primary" title="View Details">
+                                <i class="bi bi-eye"></i> Details
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 </div>

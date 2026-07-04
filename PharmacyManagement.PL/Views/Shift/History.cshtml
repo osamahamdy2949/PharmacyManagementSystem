@@ -1,84 +1,98 @@
 @model IEnumerable<ShiftViewModel>
-@{ ViewData["Title"] = "Shift History"; ViewData["PageTitle"] = "Shift Records"; }
-@{ var isAdmin = User.IsInRole(RoleNames.Administrator); }
+@{ 
+    ViewData["Title"] = "Shift History"; 
+    ViewData["PageTitle"] = "Shift Records"; 
+    var isAdmin = User.IsInRole(RoleNames.Administrator); 
+}
 
-<div class="content-card mb-4">
-    <form method="get" class="row g-3 align-items-end">
-        <div class="col-md-4">
-            <label class="form-label">From Date</label>
-            <input type="date" name="from" value="@ViewBag.From?.ToString("yyyy-MM-dd")" class="form-control" />
-        </div>
-        <div class="col-md-4">
-            <label class="form-label">To Date</label>
-            <input type="date" name="to" value="@ViewBag.To?.ToString("yyyy-MM-dd")" class="form-control" />
-        </div>
-        <div class="col-md-4">
-            <button type="submit" class="btn btn-primary w-100"><i class="bi bi-search me-2"></i> Search</button>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="h3 fw-bold mb-1 text-dark"><i class="bi bi-clock-history me-2 text-primary"></i> Shift History</h2>
+        <p class="text-muted mb-0">Review past shifts, cashier performance, and cash discrepancies.</p>
+    </div>
+</div>
+
+<div class="content-card mb-4 p-0 shadow-sm border-0 bg-transparent">
+    <form method="get">
+        <div class="d-flex flex-wrap gap-3 align-items-end p-3 bg-white rounded border">
+            <div class="flex-grow-1" style="min-width: 200px;">
+                <label class="form-label text-muted fw-bold small text-uppercase">Start Date</label>
+                <div class="position-relative">
+                    <i class="bi bi-calendar position-absolute text-muted" style="top: 50%; transform: translateY(-50%); left: 1rem;"></i>
+                    <input type="date" name="from" value="@ViewBag.From?.ToString("yyyy-MM-dd")" class="form-control bg-light border-0" style="padding-left: 2.5rem;" />
+                </div>
+            </div>
+            <div class="flex-grow-1" style="min-width: 200px;">
+                <label class="form-label text-muted fw-bold small text-uppercase">End Date</label>
+                <div class="position-relative">
+                    <i class="bi bi-calendar position-absolute text-muted" style="top: 50%; transform: translateY(-50%); left: 1rem;"></i>
+                    <input type="date" name="to" value="@ViewBag.To?.ToString("yyyy-MM-dd")" class="form-control bg-light border-0" style="padding-left: 2.5rem;" />
+                </div>
+            </div>
+            <div>
+                <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm" style="height: 38px;">
+                    <i class="bi bi-search me-2"></i> Search
+                </button>
+            </div>
         </div>
     </form>
 </div>
 
-<div class="content-card">
-    <table class="table table-pharmacy table-striped">
-        <thead>
-            <tr>
-                <th>Cashier</th>
-                <th>Date</th>
-                <th>Sales</th>
-                <th>Expected</th>
-                <th>Actual</th>
-                <th>Status</th>
-                <th>Diff</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody>
+<div class="content-card p-0 overflow-hidden shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-enterprise mb-0">
+            <thead>
+                <tr>
+                    <th>Cashier Name</th>
+                    <th>Date & Time</th>
+                    <th class="text-end">Total Sales</th>
+                    <th class="text-end">System Cash</th>
+                    <th class="text-end">Actual Drawer</th>
+                    <th class="text-center">Discrepancy</th>
+                    <th class="text-center">Status</th>
+                    <th class="text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            @if(!Model.Any()) {
+                <tr><td colspan="8" class="text-center p-5 text-muted"><i class="bi bi-clock fs-2 d-block mb-2 opacity-50"></i>No shift records found for this period.</td></tr>
+            }
             @foreach (var s in Model)
             {
-                <tr>
-                    <td><span class="badge bg-light text-dark border"><i class="bi bi-person me-1"></i> @s.UserName</span></td>
-                    <td>
-                        <div class="d-flex flex-column">
-                            <span>@DisplayHelpers.Date(s.StartTime)</span>
-                            <small class="text-muted">@s.StartTime.ToString("t") - @(s.EndTime?.ToString("t") ?? "Now")</small>
-                        </div>
+                <tr class="bg-white">
+                    <td class="fw-bold text-dark">
+                        <span class="badge bg-light text-dark border px-2 py-1"><i class="bi bi-person-badge me-1 text-primary"></i> @s.UserName</span>
                     </td>
-                    <td>@DisplayHelpers.Egp(s.TotalSales)</td>
-                    <td>@DisplayHelpers.Egp(s.SystemExpectedCash)</td>
                     <td>
+                        <span class="d-block fw-medium text-dark">@DisplayHelpers.Date(s.StartTime)</span>
+                        <small class="text-muted">@s.StartTime.ToString("t") - @(s.EndTime?.ToString("t") ?? "Now")</small>
+                    </td>
+                    <td class="text-end fw-medium text-muted">@DisplayHelpers.Egp(s.TotalSales)</td>
+                    <td class="text-end fw-medium text-dark">@DisplayHelpers.Egp(s.SystemExpectedCash)</td>
+                    <td class="text-end">
                         @if (s.ClosingCash.HasValue)
                         {
-                            <span class="fw-bold text-dark">@DisplayHelpers.Egp(s.ClosingCash.Value)</span>
+                            <span class="fw-bold text-primary">@DisplayHelpers.Egp(s.ClosingCash.Value)</span>
                         }
                         else
                         {
                             <span class="text-muted">-</span>
                         }
                     </td>
-                    <td>
-                        @if (s.IsActive)
-                        {
-                            <span class="badge bg-primary">Active</span>
-                        }
-                        else
-                        {
-                            <span class="badge bg-secondary">Closed</span>
-                        }
-                    </td>
-                    <td>
+                    <td class="text-center">
                         @if (s.CashDifference.HasValue)
                         {
                             if (Math.Abs(s.CashDifference.Value) < 0.01m)
                             {
-                                <span class="badge bg-success-subtle text-success border border-success border-opacity-25"><i class="bi bi-check-circle me-1"></i> Match</span>
+                                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i class="bi bi-check2-circle me-1"></i> Exact Match</span>
                             }
                             else if (s.CashDifference.Value > 0)
                             {
-                                <span class="badge bg-info-subtle text-info border border-info border-opacity-25">+@DisplayHelpers.Egp(s.CashDifference.Value)</span>
+                                <span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1">Overage: +@DisplayHelpers.Egp(s.CashDifference.Value)</span>
                             }
                             else
                             {
-                                <span class="badge bg-danger-subtle text-danger border border-danger border-opacity-25">@DisplayHelpers.Egp(s.CashDifference.Value)</span>
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">Short: @DisplayHelpers.Egp(s.CashDifference.Value)</span>
                             }
                         }
                         else
@@ -86,17 +100,32 @@
                             <span class="text-muted">-</span>
                         }
                     </td>
-                    <td>
-                        <div class="d-flex gap-2">
-                            <a asp-action="Details" asp-route-id="@s.Id" class="btn btn-sm btn-outline-info">Details</a>
+                    <td class="text-center">
+                        @if (s.IsActive)
+                        {
+                            <span class="badge bg-warning text-dark border shadow-sm">Active</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Closed</span>
+                        }
+                    </td>
+                    <td class="text-center">
+                        <div class="btn-group shadow-sm">
+                            <a asp-action="Details" asp-route-id="@s.Id" class="btn btn-sm btn-light border text-primary" title="View Details">
+                                <i class="bi bi-eye"></i> Details
+                            </a>
                             @if (isAdmin && s.IsActive)
                             {
-                                <a asp-action="End" asp-route-id="@s.Id" class="btn btn-sm btn-outline-danger">End</a>
+                                <a asp-action="End" asp-route-id="@s.Id" class="btn btn-sm btn-danger border-danger text-white" title="Force End Shift">
+                                    <i class="bi bi-stop-circle"></i>
+                                </a>
                             }
                         </div>
                     </td>
                 </tr>
             }
-        </tbody>
-    </table>
+            </tbody>
+        </table>
+    </div>
 </div>

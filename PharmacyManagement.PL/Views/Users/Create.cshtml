@@ -1,35 +1,60 @@
 @model PharmacyManagement.PL.Controllers.CreateUserViewModel
-@{ ViewData["Title"] = "Create User"; ViewData["PageTitle"] = "Create User"; }
+@{ 
+    ViewData["Title"] = "Create User"; 
+    ViewData["PageTitle"] = "Create System User"; 
+    ViewData["PageIcon"] = "bi-person-plus";
+}
 <partial name="_PageHeader" />
-<div class="content-card col-md-6">
-    <form asp-action="Create" method="post">
-        <div class="form-field mb-3">
-            <label asp-for="FullName" class="form-label"></label>
-            <span asp-validation-for="FullName" class="field-error"></span>
-            <input asp-for="FullName" class="form-control" />
+
+<div class="row">
+    <div class="col-lg-6">
+        <div class="content-card shadow-sm border-0">
+            <form asp-action="Create" method="post">
+                <div class="d-flex align-items-center mb-4 p-3 bg-light rounded border">
+                    <i class="bi bi-shield-check text-primary fs-4 me-3"></i>
+                    <p class="mb-0 text-muted small"><strong>Account Setup:</strong> Passwords must meet security requirements. The user can change their password later.</p>
+                </div>
+                
+                <h6 class="text-uppercase fw-bold text-muted mb-3" style="font-size: 0.75rem; letter-spacing: 0.05em;">User Information</h6>
+                
+                <div class="form-floating mb-3">
+                    <input asp-for="FullName" class="form-control" placeholder="Full Name" />
+                    <label asp-for="FullName">Full Name</label>
+                    <span asp-validation-for="FullName" class="field-error"></span>
+                </div>
+                
+                <div class="form-floating mb-4">
+                    <input asp-for="Email" class="form-control" placeholder="Email Address" type="email" />
+                    <label asp-for="Email">Email Address</label>
+                    <span asp-validation-for="Email" class="field-error"></span>
+                </div>
+
+                <h6 class="text-uppercase fw-bold text-muted mb-3 mt-4" style="font-size: 0.75rem; letter-spacing: 0.05em;">Security & Access</h6>
+
+                <div class="form-floating mb-3">
+                    <input asp-for="Password" class="form-control" placeholder="Password" type="password" />
+                    <label asp-for="Password">Initial Password</label>
+                    <span asp-validation-for="Password" class="field-error"></span>
+                </div>
+
+                <div class="form-floating mb-4">
+                    <select asp-for="Role" class="form-select">
+                        <option value="Administrator">Administrator (Full Access)</option>
+                        <option value="Pharmacist">Pharmacist (Inventory & Sales)</option>
+                        <option value="Cashier">Cashier (POS Only)</option>
+                    </select>
+                    <label asp-for="Role">System Role</label>
+                    <span asp-validation-for="Role" class="field-error"></span>
+                </div>
+
+                <partial name="_ModelLevelErrors" />
+                
+                <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+                    <a asp-action="Index" class="btn btn-light px-4 border fw-bold shadow-sm text-muted">Cancel</a>
+                    <button type="submit" class="btn btn-primary px-5 fw-bold shadow-sm"><i class="bi bi-check-lg me-2"></i> Create User</button>
+                </div>
+            </form>
         </div>
-        <div class="form-field mb-3">
-            <label asp-for="Email" class="form-label"></label>
-            <span asp-validation-for="Email" class="field-error"></span>
-            <input asp-for="Email" class="form-control" />
-        </div>
-        <div class="form-field mb-3">
-            <label asp-for="Password" class="form-label"></label>
-            <span asp-validation-for="Password" class="field-error"></span>
-            <input asp-for="Password" class="form-control" />
-        </div>
-        <div class="form-field mb-3">
-            <label asp-for="Role" class="form-label"></label>
-            <span asp-validation-for="Role" class="field-error"></span>
-            <select asp-for="Role" class="form-select">
-                <option value="Administrator">Administrator</option>
-                <option value="Pharmacist">Pharmacist</option>
-                <option value="Cashier">Cashier</option>
-            </select>
-        </div>
-        <partial name="_ModelLevelErrors" />
-        <button type="submit" class="btn btn-pharmacy">Create</button>
-        <a asp-action="Index" class="btn btn-secondary">Cancel</a>
-    </form>
+    </div>
 </div>
 @section Scripts { <partial name="_ValidationScriptsPartial" /> }

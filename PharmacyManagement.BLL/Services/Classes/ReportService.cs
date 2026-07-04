@@ -190,19 +190,13 @@ public class ReportService : IReportService
             .Where(p => p.InvoiceDate >= start && p.InvoiceDate < end)
             .SumAsync(p => p.TotalAmount);
 
-        // Calculate gross profit based on sold items (Selling Price - Purchase Price) * Quantity
-        var soldItems = await _unitOfWork.Context.Set<SalesInvoiceItem>()
-            .Include(i => i.Medicine)
-            .Where(i => i.SalesInvoice.InvoiceDate >= start && i.SalesInvoice.InvoiceDate < end)
-            .ToListAsync();
-            
-        var grossProfit = soldItems.Sum(i => (i.UnitPrice - i.Medicine.PurchasePrice) * i.Quantity);
+        var profit = sales - purchases;
 
         return new ProfitReportViewModel
         {
             TotalSales = sales,
             TotalPurchases = purchases,
-            Profit = grossProfit, // Assuming we add a setter to Profit in ViewModel
+            Profit = profit,
             FromDate = start,
             ToDate = end.AddDays(-1)
         };

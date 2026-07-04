@@ -1,49 +1,97 @@
 @model MedicineViewModel
-@{ ViewData["Title"] = "Create Medicine"; ViewData["PageTitle"] = "Create Medicine"; }
+@{ 
+    ViewData["Title"] = "Create Medicine"; 
+    ViewData["PageTitle"] = "Create Medicine"; 
+    ViewData["PageIcon"] = "bi-capsule";
+}
 <partial name="_PageHeader" />
-<div class="content-card">
-<form asp-action="Create" method="post">
-    <p class="text-muted">Basic medicine information only. Stock, prices, and expiry are set when activating a purchase batch.</p>
-    <div class="row">
-        <div class="col-md-6 mb-3 form-field">
-            <label asp-for="SerialNumber" class="form-label">SKU</label>
-            <span asp-validation-for="SerialNumber" class="field-error"></span>
-            <input asp-for="SerialNumber" class="form-control" maxlength="30" placeholder="e.g. MED-005" />
-        </div>
-        <div class="col-md-6 mb-3 form-field">
-            <label asp-for="TradeName" class="form-label"></label>
-            <span asp-validation-for="TradeName" class="field-error"></span>
-            <input asp-for="TradeName" class="form-control" maxlength="50" />
-        </div>
-        <div class="col-md-6 mb-3 form-field">
-            <label asp-for="ScientificName" class="form-label"></label>
-            <span asp-validation-for="ScientificName" class="field-error"></span>
-            <input asp-for="ScientificName" class="form-control" maxlength="50" />
-        </div>
-        <div class="col-md-6 mb-3 form-field">
-            <label asp-for="MedicineForm" class="form-label">Form</label>
-            <span asp-validation-for="MedicineForm" class="field-error"></span>
-            <select asp-for="MedicineForm" asp-items="ViewBag.MedicineForms" class="form-select"></select>
-        </div>
-        <div class="col-md-12 mb-3 form-field">
-            <label asp-for="Description" class="form-label"></label>
-            <span asp-validation-for="Description" class="field-error"></span>
-            <textarea asp-for="Description" class="form-control" maxlength="200" rows="2"></textarea>
-        </div>
-        <div class="col-md-6 mb-3 form-field">
-            <label asp-for="Manufacturer" class="form-label"></label>
-            <span asp-validation-for="Manufacturer" class="field-error"></span>
-            <input asp-for="Manufacturer" class="form-control" maxlength="50" />
-        </div>
-        <div class="col-md-6 mb-3 form-field">
-            <label asp-for="CategoryId" class="form-label">Category</label>
-            <span asp-validation-for="CategoryId" class="field-error"></span>
-            <select asp-for="CategoryId" asp-items="ViewBag.CategoryId" class="form-select"><option value="">-- Select --</option></select>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="content-card shadow-sm border-0">
+            <form asp-action="Create" method="post">
+                <div class="d-flex align-items-center mb-4 p-3 bg-light rounded border">
+                    <i class="bi bi-info-circle text-primary fs-4 me-3"></i>
+                    <p class="mb-0 text-muted small"><strong>Note:</strong> Basic medicine information only. Stock, prices, and expiry dates are managed when activating a purchase batch.</p>
+                </div>
+                
+                <h6 class="text-uppercase fw-bold text-muted mb-3" style="font-size: 0.75rem; letter-spacing: 0.05em;">Product Details</h6>
+                
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <div class="form-floating">
+                            <input asp-for="SerialNumber" class="form-control" maxlength="30" placeholder="SKU" />
+                            <label asp-for="SerialNumber">SKU Code</label>
+                        </div>
+                        <span asp-validation-for="SerialNumber" class="field-error"></span>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-floating">
+                            <input asp-for="TradeName" class="form-control" maxlength="50" placeholder="Trade Name" />
+                            <label asp-for="TradeName">Trade Name</label>
+                        </div>
+                        <span asp-validation-for="TradeName" class="field-error"></span>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-floating">
+                            <input asp-for="ScientificName" class="form-control" maxlength="50" placeholder="Scientific Name" />
+                            <label asp-for="ScientificName">Scientific Name</label>
+                        </div>
+                        <span asp-validation-for="ScientificName" class="field-error"></span>
+                    </div>
+                </div>
+
+                <h6 class="text-uppercase fw-bold text-muted mb-3 mt-4" style="font-size: 0.75rem; letter-spacing: 0.05em;">Classification & Origin</h6>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <select asp-for="CategoryId" asp-items="ViewBag.CategoryId" class="form-select">
+                                <option value="">-- Select Category --</option>
+                            </select>
+                            <label asp-for="CategoryId">Category</label>
+                        </div>
+                        <span asp-validation-for="CategoryId" class="field-error"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <select asp-for="MedicineForm" asp-items="ViewBag.MedicineForms" class="form-select">
+                                <option value="">-- Select Form --</option>
+                            </select>
+                            <label asp-for="MedicineForm">Medicine Form</label>
+                        </div>
+                        <span asp-validation-for="MedicineForm" class="field-error"></span>
+                    </div>
+                    <div class="col-md-12">
+                        <div class="form-floating">
+                            <input asp-for="Manufacturer" class="form-control" maxlength="50" placeholder="Manufacturer" />
+                            <label asp-for="Manufacturer">Manufacturer</label>
+                        </div>
+                        <span asp-validation-for="Manufacturer" class="field-error"></span>
+                    </div>
+                </div>
+
+                <h6 class="text-uppercase fw-bold text-muted mb-3 mt-4" style="font-size: 0.75rem; letter-spacing: 0.05em;">Additional Info</h6>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-12">
+                        <div class="form-floating">
+                            <textarea asp-for="Description" class="form-control" maxlength="200" placeholder="Description" style="height: 100px;"></textarea>
+                            <label asp-for="Description">Description (Optional)</label>
+                        </div>
+                        <span asp-validation-for="Description" class="field-error"></span>
+                    </div>
+                </div>
+
+                <partial name="_ModelLevelErrors" />
+                
+                <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+                    <a asp-action="Index" class="btn btn-light px-4 border fw-bold shadow-sm text-muted">Cancel</a>
+                    <button type="submit" class="btn btn-primary px-5 fw-bold shadow-sm"><i class="bi bi-save me-2"></i> Save Medicine</button>
+                </div>
+            </form>
         </div>
     </div>
-    <partial name="_ModelLevelErrors" />
-    <button type="submit" class="btn btn-pharmacy">Save</button>
-    <a asp-action="Index" class="btn btn-secondary">Cancel</a>
-</form>
 </div>
+
 @section Scripts { <partial name="_ValidationScriptsPartial" /> }

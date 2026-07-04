@@ -5,7 +5,7 @@
 }
 <partial name="_PageHeader" />
 <div class="mb-3 d-flex gap-2 flex-wrap">
-    <a asp-action="DownloadFinishedMedicinesPdf" class="btn btn-pharmacy"><i class="bi bi-file-pdf"></i> Download report PDF</a>
+    <a asp-action="DownloadFinishedMedicinesPdf" class="btn btn-primary"><i class="bi bi-file-pdf"></i> Download report PDF</a>
 </div>
 <div class="content-card">
     <p class="text-muted">Medicines with zero stock. Select supplier and purchase quantity (e.g. boxes). Stock is added in sale units automatically.</p>
@@ -47,7 +47,7 @@
                         </div>
                         <div class="col-12">
                             <span class="small text-muted restock-hint">Adds <strong class="restock-sale-units">@m.UnitsPerPurchaseUnit</strong> @(m.SaleUnit)(s) to stock</span>
-                            <button type="submit" class="btn btn-pharmacy btn-sm float-end">Restock (pending activation)</button>
+                            <button type="submit" class="btn btn-primary btn-sm float-end">Restock (pending activation)</button>
                         </div>
                     </form>
                 </div>
@@ -76,3 +76,4 @@
     });
 </script>
 }
+

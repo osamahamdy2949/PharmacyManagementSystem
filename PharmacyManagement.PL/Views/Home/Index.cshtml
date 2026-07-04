@@ -1,345 +1,397 @@
 @model PharmacyManagement.BLL.ViewModels.DashboardViewModels.DashboardViewModel
 @{
     ViewData["Title"] = "Dashboard";
-    ViewData["PageTitle"] = "Overview";
+    var userName = User.Identity?.Name?.Split('@')[0] ?? "User";
+    var hour = DateTime.Now.Hour;
+    var greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 }
 
-<!-- KPI Cards - Today -->
-<h6 class="text-muted mb-3 text-uppercase fw-bold">Today's Performance</h6>
-<div class="row g-3 mb-4">
-    <div class="col-md-4 col-sm-12">
-        <div class="content-card border-start border-primary border-4 h-100 py-3">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h6 class="text-muted mb-1 text-uppercase small fw-bold">Today's Sales</h6>
-                    <h3 class="mb-0 text-primary">@DisplayHelpers.Egp(Model.TodaySales)</h3>
-                </div>
-                <div class="icon-circle bg-primary-subtle text-primary"><i class="bi bi-cart-check"></i></div>
+<style>
+    .dash-welcome {
+        background: linear-gradient(120deg, #1E1B4B 0%, #312E81 40%, #1D4ED8 100%);
+        border-radius: 16px;
+        padding: 2.25rem 2.5rem;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+    .dash-welcome::after {
+        content: '';
+        position: absolute;
+        width: 400px;
+        height: 400px;
+        background: radial-gradient(circle, rgba(99,102,241,0.3) 0%, transparent 70%);
+        top: -100px;
+        right: -80px;
+        pointer-events: none;
+    }
+    .dash-welcome::before {
+        content: '';
+        position: absolute;
+        width: 200px;
+        height: 200px;
+        background: radial-gradient(circle, rgba(56,189,248,0.15) 0%, transparent 70%);
+        bottom: -50px;
+        left: 40%;
+        pointer-events: none;
+    }
+
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    @@media (max-width: 768px) { .kpi-grid { grid-template-columns: 1fr; } }
+    @@media (max-width: 1024px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+
+    .kpi-card {
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: 14px;
+        padding: 1.4rem;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.2s ease;
+        cursor: default;
+    }
+    .kpi-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 28px rgba(0,0,0,0.1);
+        border-color: transparent;
+    }
+    .kpi-card-accent {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+    .kpi-card:hover .kpi-card-accent { opacity: 0.04; }
+
+    .kpi-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+        margin-bottom: 1rem;
+    }
+    .kpi-label {
+        font-size: 0.73rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        color: var(--color-text-muted);
+        margin-bottom: 0.3rem;
+    }
+    .kpi-value {
+        font-size: 1.65rem;
+        font-weight: 800;
+        color: var(--color-text-main);
+        line-height: 1;
+    }
+    .kpi-sub {
+        font-size: 0.75rem;
+        color: var(--color-text-muted);
+        margin-top: 0.35rem;
+    }
+
+    .chart-card {
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: 14px;
+        overflow: hidden;
+    }
+    .chart-card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1.1rem 1.4rem;
+        border-bottom: 1px solid var(--color-border);
+        background: var(--color-bg-subtle);
+    }
+
+    .activity-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.85rem;
+        padding: 0.85rem 1rem;
+        border-radius: 10px;
+        transition: background 0.15s;
+    }
+    .activity-item:hover { background: var(--color-bg-subtle); }
+    .activity-dot {
+        width: 36px;
+        height: 36px;
+        border-radius: 9px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.85rem;
+        flex-shrink: 0;
+    }
+
+    .alert-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.35rem 0.85rem;
+        border-radius: 100px;
+        font-size: 0.78rem;
+        font-weight: 600;
+    }
+</style>
+
+<!-- Welcome Banner -->
+<div class="dash-welcome">
+    <div class="position-relative" style="z-index: 1;">
+        <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+            <div>
+                <p class="mb-1" style="color:rgba(165,180,252,0.85);font-size:0.85rem;font-weight:500;">@greeting 👋</p>
+                <h1 class="text-white fw-bold mb-1" style="font-size:clamp(1.4rem,3vw,2rem);">@userName</h1>
+                <p style="color:rgba(255,255,255,0.55);font-size:0.9rem;margin:0;">Here's what's happening at your pharmacy today.</p>
+            </div>
+            <div class="d-flex gap-2 flex-shrink-0">
+                <a asp-controller="SalesInvoice" asp-action="Pos"
+                   class="btn fw-bold px-4 py-2"
+                   style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);color:#fff;border-radius:10px;backdrop-filter:blur(8px);font-size:0.9rem;transition:all 0.2s;">
+                    <i class="bi bi-cart-plus me-2"></i> Open POS
+                </a>
+                <a asp-controller="Shift" asp-action="Current"
+                   class="btn fw-bold px-4 py-2"
+                   style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.75);border-radius:10px;font-size:0.9rem;transition:all 0.2s;">
+                    <i class="bi bi-clock me-2"></i> Shift
+                </a>
             </div>
         </div>
-    </div>
-    <div class="col-md-4 col-sm-12">
-        <div class="content-card border-start border-danger border-4 h-100 py-3">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h6 class="text-muted mb-1 text-uppercase small fw-bold">Today's Purchases</h6>
-                    <h3 class="mb-0 text-danger">@DisplayHelpers.Egp(Model.TodayPurchases)</h3>
-                </div>
-                <div class="icon-circle bg-danger-subtle text-danger"><i class="bi bi-bag-plus"></i></div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4 col-sm-12">
-        <div class="content-card border-start border-success border-4 h-100 py-3">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h6 class="text-muted mb-1 text-uppercase small fw-bold">Today's Profit</h6>
-                    <h3 class="mb-0 text-success">@DisplayHelpers.Egp(Model.TodayProfit)</h3>
-                </div>
-                <div class="icon-circle bg-success-subtle text-success"><i class="bi bi-graph-up-arrow"></i></div>
-            </div>
-        </div>
+
     </div>
 </div>
 
-<!-- KPI Cards - Monthly -->
-<h6 class="text-muted mb-3 text-uppercase fw-bold">Monthly Performance</h6>
+<!-- ── Alert Row: always visible ── -->
 <div class="row g-3 mb-4">
-    <div class="col-md-4 col-sm-12">
-        <div class="content-card border-start border-primary border-4 h-100 py-3">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h6 class="text-muted mb-1 text-uppercase small fw-bold">Monthly Sales</h6>
-                    <h3 class="mb-0 text-primary">@DisplayHelpers.Egp(Model.MonthlySales)</h3>
+    <!-- Out of Stock -->
+    <div class="col-6 col-md-3">
+        <a asp-controller="Reports" asp-action="FinishedMedicinesReport" class="text-decoration-none d-block">
+            <div class="kpi-card d-flex align-items-center gap-3 py-3 px-3" style="border-left: 4px solid #EF4444;">
+                <div class="kpi-icon flex-shrink-0 mb-0" style="background:#FEF2F2;color:#EF4444;width:38px;height:38px;font-size:0.95rem;">
+                    <i class="bi bi-slash-circle"></i>
                 </div>
-                <div class="icon-circle bg-primary-subtle text-primary"><i class="bi bi-calendar-check"></i></div>
+                <div>
+                    <div class="kpi-label mb-0" style="color:#EF4444;">Out of Stock</div>
+                    <div class="kpi-value" style="font-size:1.4rem;color:#EF4444;">@Model.LowStockItems</div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <!-- Near Low Stock -->
+    <div class="col-6 col-md-3">
+        <div class="kpi-card d-flex align-items-center gap-3 py-3 px-3" style="border-left: 4px solid #F97316;">
+            <div class="kpi-icon flex-shrink-0 mb-0" style="background:#FFF7ED;color:#F97316;width:38px;height:38px;font-size:0.95rem;">
+                <i class="bi bi-arrow-down-circle"></i>
+            </div>
+            <div>
+                <div class="kpi-label mb-0" style="color:#F97316;">Near Low Stock</div>
+                <div class="kpi-value" style="font-size:1.4rem;color:#F97316;">@Model.NearLowStockItems</div>
             </div>
         </div>
     </div>
-    <div class="col-md-4 col-sm-12">
-        <div class="content-card border-start border-danger border-4 h-100 py-3">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h6 class="text-muted mb-1 text-uppercase small fw-bold">Monthly Purchases</h6>
-                    <h3 class="mb-0 text-danger">@DisplayHelpers.Egp(Model.MonthlyPurchases)</h3>
+    <!-- Expired -->
+    <div class="col-6 col-md-3">
+        <a asp-controller="Reports" asp-action="ExpiredMedicinesReport" class="text-decoration-none d-block">
+            <div class="kpi-card d-flex align-items-center gap-3 py-3 px-3" style="border-left: 4px solid #DC2626;">
+                <div class="kpi-icon flex-shrink-0 mb-0" style="background:#FEF2F2;color:#DC2626;width:38px;height:38px;font-size:0.95rem;">
+                    <i class="bi bi-calendar-x"></i>
                 </div>
-                <div class="icon-circle bg-danger-subtle text-danger"><i class="bi bi-calendar-minus"></i></div>
+                <div>
+                    <div class="kpi-label mb-0" style="color:#DC2626;">Expired</div>
+                    <div class="kpi-value" style="font-size:1.4rem;color:#DC2626;">@Model.ExpiringMedicines</div>
+                </div>
             </div>
-        </div>
+        </a>
     </div>
-    <div class="col-md-4 col-sm-12">
-        <div class="content-card border-start border-success border-4 h-100 py-3">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h6 class="text-muted mb-1 text-uppercase small fw-bold">Monthly Profit</h6>
-                    <h3 class="mb-0 text-success">@DisplayHelpers.Egp(Model.MonthlyProfit)</h3>
+    <!-- Near Expiry -->
+    <div class="col-6 col-md-3">
+        <a asp-controller="Reports" asp-action="ExpiryReport" class="text-decoration-none d-block">
+            <div class="kpi-card d-flex align-items-center gap-3 py-3 px-3" style="border-left: 4px solid #D97706;">
+                <div class="kpi-icon flex-shrink-0 mb-0" style="background:#FFFBEB;color:#D97706;width:38px;height:38px;font-size:0.95rem;">
+                    <i class="bi bi-calendar-event"></i>
                 </div>
-                <div class="icon-circle bg-success-subtle text-success"><i class="bi bi-calendar2-check"></i></div>
+                <div>
+                    <div class="kpi-label mb-0" style="color:#D97706;">Near Expiry</div>
+                    <div class="kpi-value" style="font-size:1.4rem;color:#D97706;">@Model.NearExpiringMedicines</div>
+                </div>
             </div>
-        </div>
+        </a>
     </div>
 </div>
 
-<!-- KPI Cards - Entities -->
-<h6 class="text-muted mb-3 text-uppercase fw-bold">Overview</h6>
-<div class="row g-3 mb-4">
-    <div class="col-md-4 col-sm-12">
-        <div class="content-card border-start border-warning border-4 h-100 py-3">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h6 class="text-muted mb-1 text-uppercase small fw-bold">Outstanding Debt</h6>
-                    <h3 class="mb-0 text-warning">@DisplayHelpers.Egp(Model.OutstandingDebt)</h3>
-                </div>
-                <div class="icon-circle bg-warning-subtle text-warning"><i class="bi bi-exclamation-circle"></i></div>
-            </div>
-        </div>
+<!-- KPI Grid: Today -->
+<h6 class="text-muted fw-bold text-uppercase mb-3 ms-1" style="font-size:0.7rem;letter-spacing:0.08em;">Today</h6>
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-card-accent" style="background:#4F46E5;"></div>
+        <div class="kpi-icon" style="background:#EEF2FF;color:#4F46E5;"><i class="bi bi-bag-check"></i></div>
+        <div class="kpi-label">Sales Revenue</div>
+        <div class="kpi-value">@DisplayHelpers.Egp(Model.TodaySales)</div>
+        <div class="kpi-sub">This month: @DisplayHelpers.Egp(Model.MonthlySales)</div>
     </div>
-    <div class="col-md-4 col-sm-12">
-        <div class="content-card border-start border-info border-4 h-100 py-3">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h6 class="text-muted mb-1 text-uppercase small fw-bold">Total Customers</h6>
-                    <h3 class="mb-0 text-info">@Model.TotalCustomers</h3>
-                </div>
-                <div class="icon-circle bg-info-subtle text-info"><i class="bi bi-people"></i></div>
-            </div>
-        </div>
+    <div class="kpi-card">
+        <div class="kpi-card-accent" style="background:#EF4444;"></div>
+        <div class="kpi-icon" style="background:#FEF2F2;color:#EF4444;"><i class="bi bi-box-arrow-in-down"></i></div>
+        <div class="kpi-label">Purchases</div>
+        <div class="kpi-value">@DisplayHelpers.Egp(Model.TodayPurchases)</div>
+        <div class="kpi-sub">This month: @DisplayHelpers.Egp(Model.MonthlyPurchases)</div>
     </div>
-    <div class="col-md-4 col-sm-12">
-        <div class="content-card border-start border-secondary border-4 h-100 py-3">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h6 class="text-muted mb-1 text-uppercase small fw-bold">Total Products</h6>
-                    <h3 class="mb-0 text-secondary">@Model.TotalProducts</h3>
-                </div>
-                <div class="icon-circle bg-secondary-subtle text-secondary"><i class="bi bi-box"></i></div>
-            </div>
-        </div>
+    <div class="kpi-card">
+        <div class="kpi-card-accent" style="background:#10B981;"></div>
+        <div class="kpi-icon" style="background:#ECFDF5;color:#10B981;"><i class="bi bi-graph-up-arrow"></i></div>
+        <div class="kpi-label">Net Profit</div>
+        <div class="kpi-value" style="color:#10B981;">@DisplayHelpers.Egp(Model.TodayProfit)</div>
+        <div class="kpi-sub">This month: @DisplayHelpers.Egp(Model.MonthlyProfit)</div>
     </div>
 </div>
 
-<!-- Alerts -->
-<div class="row g-3 mb-4">
-    @if (Model.LowStockItems > 0)
-    {
-        <div class="col-md-3 col-sm-6">
-            <div class="alert alert-danger border-danger border-opacity-50 shadow-sm d-flex flex-column align-items-center mb-0 p-3 text-center">
-                <i class="bi bi-exclamation-octagon-fill fs-2 text-danger mb-2"></i>
-                <h6 class="alert-heading fw-bold mb-1">Low Stock Items</h6>
-                <h4 class="mb-0 text-danger fw-bold">@Model.LowStockItems</h4>
+<div class="row g-4 mt-1">
+    <!-- Chart -->
+    <div class="col-xl-8">
+        <div class="chart-card h-100">
+            <div class="chart-card-header">
+                <div>
+                    <h6 class="mb-0 fw-bold">Revenue Trend</h6>
+                    <small class="text-muted">Last 7 days</small>
+                </div>
+                <span class="badge" style="background:#EEF2FF;color:#4F46E5;font-size:0.75rem;padding:0.4rem 0.75rem;border-radius:6px;">
+                    @Model.TotalProducts products
+                </span>
             </div>
-        </div>
-    }
-    @if (Model.NearLowStockItems > 0)
-    {
-        <div class="col-md-3 col-sm-6">
-            <div class="alert alert-warning border-warning border-opacity-50 shadow-sm d-flex flex-column align-items-center mb-0 p-3 text-center">
-                <i class="bi bi-exclamation-triangle-fill fs-2 text-warning mb-2"></i>
-                <h6 class="alert-heading fw-bold mb-1">Near Low Stock</h6>
-                <h4 class="mb-0 text-warning fw-bold">@Model.NearLowStockItems</h4>
-            </div>
-        </div>
-    }
-    @if (Model.ExpiringMedicines > 0)
-    {
-        <div class="col-md-3 col-sm-6">
-            <div class="alert alert-danger border-danger border-opacity-50 shadow-sm d-flex flex-column align-items-center mb-0 p-3 text-center">
-                <i class="bi bi-calendar-x-fill fs-2 text-danger mb-2"></i>
-                <h6 class="alert-heading fw-bold mb-1">Expired Medicines</h6>
-                <h4 class="mb-0 text-danger fw-bold">@Model.ExpiringMedicines</h4>
-            </div>
-        </div>
-    }
-    @if (Model.NearExpiringMedicines > 0)
-    {
-        <div class="col-md-3 col-sm-6">
-            <div class="alert alert-warning border-warning border-opacity-50 shadow-sm d-flex flex-column align-items-center mb-0 p-3 text-center">
-                <i class="bi bi-calendar-event fs-2 text-warning mb-2"></i>
-                <h6 class="alert-heading fw-bold mb-1">Near Expiring</h6>
-                <h4 class="mb-0 text-warning fw-bold">@Model.NearExpiringMedicines</h4>
-            </div>
-        </div>
-    }
-</div>
-
-<!-- Main Dashboard Content -->
-<div class="row">
-    <!-- Charts Column -->
-    <div class="col-lg-8">
-        <!-- Sales Trend Chart -->
-        <div class="content-card mb-4">
-            <h5 class="mb-4">Sales Trend (Last 7 Days)</h5>
-            <div style="height: 300px;">
+            <div class="p-4" style="height:320px;">
                 <canvas id="salesTrendChart"></canvas>
             </div>
         </div>
-
-        <!-- Removed Top Selling Medicines -->
     </div>
 
-    <!-- Sidebar Column -->
-    <div class="col-lg-4">
-        <!-- Quick Actions -->
-        <div class="content-card mb-4 bg-primary text-white bg-gradient">
-            <h5 class="mb-4 text-white">Quick Actions</h5>
-            <div class="d-grid gap-3">
-                <a asp-controller="SalesInvoice" asp-action="Pos" class="btn btn-light text-primary fw-bold text-start p-3 d-flex justify-content-between align-items-center shadow-sm">
-                    <span><i class="bi bi-cart-plus me-2"></i> New POS Sale</span>
-                    <i class="bi bi-chevron-right text-muted"></i>
-                </a>
-                <a asp-controller="Shift" asp-action="Current" class="btn btn-primary border-white border-opacity-50 text-start p-3 d-flex justify-content-between align-items-center">
-                    <span><i class="bi bi-clock-history me-2"></i> Shift Management</span>
-                    <i class="bi bi-chevron-right text-white-50"></i>
-                </a>
-                <a asp-controller="Payment" asp-action="Index" class="btn btn-primary border-white border-opacity-50 text-start p-3 d-flex justify-content-between align-items-center">
-                    <span><i class="bi bi-cash-stack me-2"></i> Record Payment</span>
-                    <i class="bi bi-chevron-right text-white-50"></i>
-                </a>
+    <!-- Right column -->
+    <div class="col-xl-4 d-flex flex-column gap-4">
+
+        <!-- Counters -->
+        <div class="row g-3">
+            <div class="col-6">
+                <div class="kpi-card text-center py-3">
+                    <div class="kpi-value mb-1" style="font-size:1.4rem;">@Model.TotalCustomers</div>
+                    <div class="kpi-label">Customers</div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="kpi-card text-center py-3">
+                    <div class="kpi-value mb-1" style="font-size:1.4rem;color:#F59E0B;">@DisplayHelpers.Egp(Model.OutstandingDebt)</div>
+                    <div class="kpi-label">Outstanding Debt</div>
+                </div>
             </div>
         </div>
 
         <!-- Recent Activity -->
-        <div class="content-card mb-4">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h5 class="mb-0">Recent Activity</h5>
+        <div class="chart-card flex-grow-1" style="max-height:340px;overflow:hidden;">
+            <div class="chart-card-header">
+                <h6 class="mb-0 fw-bold">Recent Activity</h6>
             </div>
-            
-            <div class="timeline">
+            <div style="overflow-y:auto;max-height:270px;">
                 @if (!Model.RecentActivities.Any())
                 {
-                    <div class="text-center text-muted py-3">No recent activity.</div>
+                    <div class="text-center text-muted py-5 px-3">
+                        <i class="bi bi-inbox fs-3 opacity-25 d-block mb-2"></i>
+                        No recent activity.
+                    </div>
                 }
-                @foreach (var activity in Model.RecentActivities)
+                @foreach (var activity in Model.RecentActivities.Take(5))
                 {
-                    <div class="d-flex mb-3 position-relative">
-                        <div class="me-3">
-                            <div class="icon-circle @activity.Color border border-white border-2 shadow-sm" style="width: 45px; height: 45px; position: relative; z-index: 2;">
-                                <i class="bi @activity.Icon"></i>
-                            </div>
+                    <div class="activity-item">
+                        <div class="activity-dot @activity.Color.Replace("text-", "bg-").Replace("-subtle", "")">
+                            <i class="bi @activity.Icon text-white"></i>
                         </div>
-                        <div class="pb-3 border-bottom w-100">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div>
-                                    <h6 class="mb-1 text-dark fw-bold">@activity.ActivityType</h6>
-                                    <p class="mb-1 small text-muted">@activity.Description</p>
-                                </div>
-                                @if (activity.Amount.HasValue)
-                                {
-                                    <span class="badge @activity.Color.Replace("-subtle", "").Replace("text-", "bg-") fw-bold shadow-sm">
-                                        @DisplayHelpers.Egp(activity.Amount.Value)
-                                    </span>
-                                }
-                            </div>
-                            <small class="text-muted"><i class="bi bi-clock me-1"></i>@activity.Time.ToString("g")</small>
+                        <div style="min-width:0;">
+                            <div class="fw-semibold text-dark" style="font-size:0.83rem;">@activity.ActivityType</div>
+                            <div class="text-muted text-truncate" style="font-size:0.75rem;">@activity.Description</div>
+                            <div style="font-size:0.7rem;color:#94A3B8;margin-top:2px;">@activity.Time.ToString("MMM d, h:mm tt")</div>
                         </div>
+                        @if (activity.Amount.HasValue)
+                        {
+                            <div class="ms-auto flex-shrink-0">
+                                <span style="font-size:0.78rem;font-weight:600;color:#4F46E5;">@DisplayHelpers.Egp(activity.Amount.Value)</span>
+                            </div>
+                        }
                     </div>
                 }
             </div>
         </div>
+
     </div>
 </div>
 
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        $(document).ready(function () {
-            // Prepare data for Chart.js
+        (function () {
             var labels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SalesTrend.Select(t => t.Date)));
-            var data = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SalesTrend.Select(t => t.Amount)));
+            var data   = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SalesTrend.Select(t => t.Amount)));
+            if (!labels.length) return;
 
-            if (labels.length > 0) {
-                var ctx = document.getElementById('salesTrendChart').getContext('2d');
-                var gradient = ctx.createLinearGradient(0, 0, 0, 400);
-                gradient.addColorStop(0, 'rgba(13, 110, 253, 0.5)'); // Primary color with opacity
-                gradient.addColorStop(1, 'rgba(13, 110, 253, 0.05)');
+            var ctx = document.getElementById('salesTrendChart').getContext('2d');
+            var grad = ctx.createLinearGradient(0, 0, 0, 300);
+            grad.addColorStop(0, 'rgba(99,102,241,0.45)');
+            grad.addColorStop(1, 'rgba(99,102,241,0)');
 
-                new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'Sales Revenue (EGP)',
-                            data: data,
-                            borderColor: '#0d6efd',
-                            backgroundColor: gradient,
-                            borderWidth: 3,
-                            pointBackgroundColor: '#fff',
-                            pointBorderColor: '#0d6efd',
-                            pointBorderWidth: 2,
-                            pointRadius: 4,
-                            pointHoverRadius: 6,
-                            fill: true,
-                            tension: 0.4
-                        }]
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [{
+                        data,
+                        borderColor: '#6366F1',
+                        backgroundColor: grad,
+                        borderWidth: 3,
+                        pointBackgroundColor: '#fff',
+                        pointBorderColor: '#6366F1',
+                        pointBorderWidth: 2.5,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#0B1120',
+                            padding: 12,
+                            cornerRadius: 8,
+                            titleFont: { size: 12, family: 'Inter' },
+                            bodyFont: { size: 14, family: 'Inter', weight: '700' },
+                            displayColors: false,
+                            callbacks: {
+                                label: ctx => new Intl.NumberFormat('en-EG', { style: 'currency', currency: 'EGP' }).format(ctx.parsed.y)
+                            }
+                        }
                     },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                display: false
-                            },
-                            tooltip: {
-                                callbacks: {
-                                    label: function(context) {
-                                        let label = context.dataset.label || '';
-                                        if (label) {
-                                            label += ': ';
-                                        }
-                                        if (context.parsed.y !== null) {
-                                            label += new Intl.NumberFormat('en-EG', { style: 'currency', currency: 'EGP' }).format(context.parsed.y);
-                                        }
-                                        return label;
-                                    }
-                                }
-                            }
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: '#F1F5F9', drawBorder: false, borderDash: [4, 4] },
+                            ticks: { font: { family: 'Inter', size: 11 }, color: '#94A3B8' }
                         },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                grid: {
-                                    color: '#e9ecef',
-                                    drawBorder: false
-                                },
-                                ticks: {
-                                    callback: function(value, index, values) {
-                                        if (value >= 1000) {
-                                            return 'EGP ' + (value / 1000).toFixed(1) + 'k';
-                                        }
-                                        return 'EGP ' + value;
-                                    }
-                                }
-                            },
-                            x: {
-                                grid: {
-                                    display: false,
-                                    drawBorder: false
-                                }
-                            }
-                        },
-                        interaction: {
-                            intersect: false,
-                            mode: 'index',
-                        },
-                    }
-                });
-            }
-        });
+                        x: {
+                            grid: { display: false, drawBorder: false },
+                            ticks: { font: { family: 'Inter', size: 11 }, color: '#94A3B8' }
+                        }
+                    },
+                    interaction: { intersect: false, mode: 'index' }
+                }
+            });
+        })();
     </script>
-    
-    <style>
-        .timeline::before {
-            content: '';
-            position: absolute;
-            top: 20px;
-            bottom: 0;
-            left: 22.5px;
-            width: 2px;
-            background-color: #e9ecef;
-            z-index: 1;
-        }
-        .timeline {
-            position: relative;
-        }
-    </style>
 }

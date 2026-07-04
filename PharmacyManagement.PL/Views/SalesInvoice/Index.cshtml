@@ -1,61 +1,98 @@
 @model IEnumerable<SalesInvoiceViewModel>
-@{ ViewData["Title"] = "Sales History"; ViewData["PageTitle"] = "Sales Invoices"; }
-<div class="page-header d-flex justify-content-between align-items-center">
-    <h2><i class="bi bi-receipt"></i> Sales History</h2>
+@{ 
+    ViewData["Title"] = "Sales History"; 
+    ViewData["PageTitle"] = "Sales Invoices"; 
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="h3 fw-bold mb-1 text-dark"><i class="bi bi-receipt me-2 text-primary"></i> Sales History</h2>
+        <p class="text-muted mb-0">View all completed sales and print receipts.</p>
+    </div>
     <div class="d-flex gap-2">
-        <form method="get" asp-action="Index" class="d-flex gap-2">
-            <select name="filter" class="form-select w-auto" onchange="this.form.submit()">
+        <form method="get" asp-action="Index" class="d-flex gap-2 align-items-center bg-white p-1 rounded shadow-sm border">
+            <i class="bi bi-funnel text-muted ms-2"></i>
+            <select name="filter" class="form-select border-0 shadow-none bg-transparent fw-medium" onchange="this.form.submit()" style="min-width: 150px;">
                 <option value="" selected="@(string.IsNullOrEmpty((string?)ViewBag.CurrentFilter))">All Invoices</option>
                 <option value="Cash" selected="@((string?)ViewBag.CurrentFilter == "Cash")">Cash Only</option>
                 <option value="Partial" selected="@((string?)ViewBag.CurrentFilter == "Partial")">Partial / Credit Only</option>
             </select>
         </form>
+        <a asp-action="Pos" class="btn btn-primary fw-bold shadow-sm">
+            <i class="bi bi-cart-plus me-2"></i> New Sale
+        </a>
     </div>
 </div>
-<div class="content-card">
-<table class="table table-pharmacy table-striped">
-    <thead><tr><th>#</th><th>Customer</th><th>Cashier</th><th>Total</th><th>Date</th><th>Status</th><th></th></tr></thead>
-    <tbody>
-    @foreach (var s in Model)
-    {
-        <tr>
-            <td>@s.Id</td>
-            <td>@s.CustomerName</td>
-            <td><span class="badge bg-light text-dark border"><i class="bi bi-person me-1"></i> @s.CreatedByUserName</span></td>
-            <td>@DisplayHelpers.Egp(s.TotalAmount)</td>
-            <td>
-                <div class="d-flex flex-column">
-                    <span>@DisplayHelpers.Date(s.InvoiceDate)</span>
-                    <small class="text-muted">@s.InvoiceDate.ToString("t")</small>
-                </div>
-            </td>
-            <td>
-                @if (s.SaleType == "Cash")
-                {
-                    <span class="badge bg-light text-dark border">Cash</span>
-                }
-                else
-                {
-                    @if (s.PaymentStatus == "Paid")
-                    {
-                        <span class="badge bg-success">Paid</span>
-                    }
-                    else if (s.PaymentStatus == "PartiallyPaid")
-                    {
-                        <span class="badge bg-warning text-dark">Partial</span>
-                    }
-                    else
-                    {
-                        <span class="badge bg-danger">Credit</span>
-                    }
-                }
-            </td>
-            <td>
-                <a asp-action="Details" asp-route-id="@s.Id" class="btn btn-sm btn-outline-info">Details</a>
-                <a asp-action="DownloadReceipt" asp-route-id="@s.Id" class="btn btn-sm btn-outline-primary"><i class="bi bi-file-pdf"></i></a>
-            </td>
-        </tr>
-    }
-    </tbody>
-</table>
+
+<div class="content-card p-0 overflow-hidden shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-enterprise">
+            <thead>
+                <tr>
+                    <th>Invoice #</th>
+                    <th>Customer Name</th>
+                    <th>Cashier</th>
+                    <th class="text-end">Total Amount</th>
+                    <th>Date & Time</th>
+                    <th>Payment Status</th>
+                    <th class="text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            @if(!Model.Any()) {
+                <tr><td colspan="7" class="text-center p-5 text-muted"><i class="bi bi-inbox fs-2 d-block mb-2 opacity-50"></i>No sales history found.</td></tr>
+            }
+            @foreach (var s in Model)
+            {
+                <tr>
+                    <td class="fw-bold text-dark">#@s.Id</td>
+                    <td>
+                        <span class="d-block fw-medium text-dark">@(string.IsNullOrWhiteSpace(s.CustomerName) ? "Walk-in Customer" : s.CustomerName)</span>
+                    </td>
+                    <td>
+                        <span class="badge bg-light text-muted border px-2 py-1"><i class="bi bi-person me-1"></i> @s.CreatedByUserName</span>
+                    </td>
+                    <td class="text-end fw-bold text-primary">
+                        @DisplayHelpers.Egp(s.TotalAmount)
+                    </td>
+                    <td>
+                        <span class="d-block text-dark fw-medium">@DisplayHelpers.Date(s.InvoiceDate)</span>
+                        <small class="text-muted">@s.InvoiceDate.ToString("t")</small>
+                    </td>
+                    <td>
+                        @if (s.SaleType == "Cash")
+                        {
+                            <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-cash me-1"></i> Cash</span>
+                        }
+                        else
+                        {
+                            @if (s.PaymentStatus == "Paid")
+                            {
+                                <span class="badge bg-success-subtle text-success border border-success-subtle">Paid</span>
+                            }
+                            else if (s.PaymentStatus == "PartiallyPaid")
+                            {
+                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Partial</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Credit</span>
+                            }
+                        }
+                    </td>
+                    <td class="text-center">
+                        <div class="btn-group shadow-sm">
+                            <a asp-action="Details" asp-route-id="@s.Id" class="btn btn-sm btn-light border" title="View Details">
+                                <i class="bi bi-eye text-primary"></i>
+                            </a>
+                            <a asp-action="DownloadReceipt" asp-route-id="@s.Id" class="btn btn-sm btn-light border" title="Download PDF">
+                                <i class="bi bi-file-pdf text-danger"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
 </div>

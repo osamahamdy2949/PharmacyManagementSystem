@@ -1,21 +1,57 @@
 @model IEnumerable<SupplierViewModel>
-@{ ViewData["Title"] = "Suppliers"; ViewData["PageTitle"] = "Suppliers"; ViewData["AddUrl"] = Url.Action("Create"); ViewData["AddText"] = "Add Supplier"; }
+@{ 
+    ViewData["Title"] = "Suppliers"; 
+    ViewData["PageTitle"] = "Suppliers Directory"; 
+    ViewData["PageIcon"] = "bi-truck";
+    ViewData["AddUrl"] = Url.Action("Create"); 
+    ViewData["AddText"] = "Add Supplier"; 
+}
 <partial name="_PageHeader" />
-<div class="content-card">
-<table class="table table-pharmacy table-striped">
-    <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th></th></tr></thead>
-    <tbody>
-    @foreach (var s in Model)
-    {
-        <tr>
-            <td>@s.Name</td><td>@s.Email</td><td>@s.Phone</td>
-            <td>
-                <a asp-action="Details" asp-route-id="@s.Id" class="btn btn-sm btn-outline-info">Details</a>
-                <a asp-action="Edit" asp-route-id="@s.Id" class="btn btn-sm btn-outline-secondary">Edit</a>
-                <a asp-action="Delete" asp-route-id="@s.Id" class="btn btn-sm btn-outline-danger">Delete</a>
-            </td>
-        </tr>
-    }
-    </tbody>
-</table>
+
+<div class="content-card p-0 overflow-hidden shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-enterprise mb-0">
+            <thead>
+                <tr>
+                    <th>Supplier Name</th>
+                    <th>Contact Email</th>
+                    <th>Phone Number</th>
+                    <th class="text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            @if(!Model.Any()) {
+                <tr><td colspan="4" class="text-center p-5 text-muted"><i class="bi bi-inbox fs-2 d-block mb-2 opacity-50"></i>No suppliers found.</td></tr>
+            }
+            @foreach (var s in Model)
+            {
+                <tr class="bg-white">
+                    <td class="fw-bold text-dark">
+                        <div class="d-flex align-items-center">
+                            <div class="rounded-circle bg-light d-flex align-items-center justify-content-center me-3 border text-muted" style="width: 32px; height: 32px;">
+                                <i class="bi bi-building"></i>
+                            </div>
+                            @s.Name
+                        </div>
+                    </td>
+                    <td><a href="mailto:@s.Email" class="text-decoration-none">@s.Email</a></td>
+                    <td><a href="tel:@s.Phone" class="text-decoration-none text-muted">@s.Phone</a></td>
+                    <td class="text-center">
+                        <div class="btn-group shadow-sm">
+                            <a asp-action="Details" asp-route-id="@s.Id" class="btn btn-sm btn-light border text-primary" title="View Details">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a asp-action="Edit" asp-route-id="@s.Id" class="btn btn-sm btn-light border text-secondary" title="Edit">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <a asp-action="Delete" asp-route-id="@s.Id" class="btn btn-sm btn-light border text-danger" title="Delete">
+                                <i class="bi bi-trash3-fill"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
 </div>

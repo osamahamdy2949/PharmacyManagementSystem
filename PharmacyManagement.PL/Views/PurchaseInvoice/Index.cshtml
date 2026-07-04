@@ -1,7 +1,8 @@
 @model IEnumerable<PurchaseInvoiceViewModel>
 @{
     ViewData["Title"] = "Purchase Invoices";
-    ViewData["PageTitle"] = "Purchases";
+    ViewData["PageTitle"] = "Purchase History";
+    ViewData["PageIcon"] = "bi-bag-check";
     ViewData["AddUrl"] = Url.Action("Create");
     ViewData["AddText"] = "New Purchase";
     var pending = ViewBag.PendingBatches as IReadOnlyList<PendingBatchViewModel> ?? Array.Empty<PendingBatchViewModel>();
@@ -10,28 +11,98 @@
 
 @if (pending.Any())
 {
-    <div class="content-card mb-3">
-        <h5 class="mb-3"><i class="bi bi-hourglass-split text-warning"></i> Pending Activation (inactive stock)</h5>
-        <table class="table table-sm table-pharmacy">
-            <thead><tr><th>Medicine</th><th>SKU</th><th>Dose</th><th>Batch</th><th>Supplier</th><th>Qty</th><th></th></tr></thead>
+    <div class="content-card p-0 mb-5 overflow-hidden border-warning border-opacity-50 shadow-sm">
+        <div class="bg-warning bg-opacity-10 p-3 border-bottom border-warning border-opacity-25 d-flex align-items-center">
+            <i class="bi bi-hourglass-split text-warning fs-4 me-2"></i>
+            <div>
+                <h5 class="mb-0 fw-bold text-dark">Pending Stock Activation</h5>
+                <small class="text-muted">These batches have been purchased but are inactive. Activate them to update inventory.</small>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-enterprise mb-0">
+                <thead class="bg-white">
+                    <tr>
+                        <th>Medicine</th>
+                        <th>SKU</th>
+                        <th>Dose</th>
+                        <th>Batch #</th>
+                        <th>Supplier</th>
+                        <th class="text-center">Qty</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var p in pending)
+                {
+                    <tr class="bg-white">
+                        <td class="fw-bold text-dark">@p.MedicineName</td>
+                        <td><code class="bg-light px-2 py-1 rounded text-dark border">@p.Sku</code></td>
+                        <td><span class="badge bg-light text-muted border">@p.Dose</span></td>
+                        <td><span class="fw-medium">@p.BatchNumber</span></td>
+                        <td>@p.SupplierName</td>
+                        <td class="text-center fw-bold text-primary">@p.PendingQuantity <small class="text-muted fw-normal">@p.PurchaseUnit</small></td>
+                        <td class="text-end">
+                            <div class="btn-group shadow-sm">
+                                <a asp-action="Activate" asp-route-id="@p.BatchId" class="btn btn-sm btn-success fw-bold" title="Activate Stock">
+                                    <i class="bi bi-check2-circle me-1"></i> Activate
+                                </a>
+                                <button type="button" class="btn btn-sm btn-light border" onclick="editPendingQuantity(@p.BatchId, @p.PendingQuantity)" title="Edit Quantity">
+                                    <i class="bi bi-pencil text-primary"></i>
+                                </button>
+                                <form asp-action="DeletePendingBatch" method="post" onsubmit="return confirm('Permanently delete this pending batch?');" class="d-inline">
+                                    <input type="hidden" name="id" value="@p.BatchId" />
+                                    <button type="submit" class="btn btn-sm btn-light border text-danger" title="Delete Batch">
+                                        <i class="bi bi-trash3-fill"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+<div class="content-card p-0 overflow-hidden shadow-sm">
+    <div class="bg-light p-3 border-bottom d-flex align-items-center">
+        <h6 class="mb-0 fw-bold text-muted text-uppercase" style="font-size: 0.8rem; letter-spacing: 0.05em;"><i class="bi bi-clock-history me-2"></i> Recent Invoices</h6>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-enterprise mb-0">
+            <thead>
+                <tr>
+                    <th>Invoice #</th>
+                    <th>Date & Time</th>
+                    <th>Supplier</th>
+                    <th class="text-end">Total Amount</th>
+                    <th class="text-center">Actions</th>
+                </tr>
+            </thead>
             <tbody>
-            @foreach (var p in pending)
+            @if(!Model.Any()) {
+                <tr><td colspan="5" class="text-center p-5 text-muted"><i class="bi bi-inbox fs-2 d-block mb-2 opacity-50"></i>No purchase history found.</td></tr>
+            }
+            @foreach (var p in Model)
             {
                 <tr>
-                    <td>@p.MedicineName</td>
-                    <td><code>@p.Sku</code></td>
-                    <td>@p.Dose</td>
-                    <td>@p.BatchNumber</td>
-                    <td>@p.SupplierName</td>
-                    <td>@p.PendingQuantity @p.PurchaseUnit</td>
+                    <td class="fw-bold text-dark">#@p.Id</td>
                     <td>
-                        <div class="d-flex gap-1">
-                            <a asp-action="Activate" asp-route-id="@p.BatchId" class="btn btn-sm btn-pharmacy">Activate</a>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="editPendingQuantity(@p.BatchId, @p.PendingQuantity)" title="Edit Quantity"><i class="bi bi-pencil"></i></button>
-                            <form asp-action="DeletePendingBatch" method="post" onsubmit="return confirm('Are you sure you want to permanently delete this pending batch?');">
-                                <input type="hidden" name="id" value="@p.BatchId" />
-                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete Batch"><i class="bi bi-trash"></i></button>
-                            </form>
+                        <span class="d-block fw-medium text-dark">@DisplayHelpers.Date(p.InvoiceDate)</span>
+                        <small class="text-muted">@p.InvoiceDate.ToString("t")</small>
+                    </td>
+                    <td><span class="badge bg-light text-dark border px-2 py-1"><i class="bi bi-truck me-1"></i> @p.SupplierName</span></td>
+                    <td class="text-end fw-bold text-primary">@DisplayHelpers.Egp(p.TotalAmount)</td>
+                    <td class="text-center">
+                        <div class="btn-group shadow-sm">
+                            <a asp-action="Details" asp-route-id="@p.Id" class="btn btn-sm btn-light border" title="View Details">
+                                <i class="bi bi-eye text-primary"></i>
+                            </a>
+                            <a asp-action="DownloadReceipt" asp-route-id="@p.Id" class="btn btn-sm btn-light border" title="Download PDF">
+                                <i class="bi bi-file-pdf text-danger"></i>
+                            </a>
                         </div>
                     </td>
                 </tr>
@@ -39,7 +110,7 @@
             </tbody>
         </table>
     </div>
-}
+</div>
 
 @section Scripts {
     <script>
@@ -82,22 +153,3 @@
         }
     </script>
 }
-
-<div class="content-card">
-<table class="table table-pharmacy table-striped">
-    <thead><tr><th>Invoice #</th><th>Date</th><th>Supplier</th><th>Total</th><th></th></tr></thead>
-    <tbody>
-    @foreach (var p in Model)
-    {
-        <tr>
-            <td>@p.Id</td><td>@DisplayHelpers.Date(p.InvoiceDate)</td><td>@p.SupplierName</td>
-            <td>@DisplayHelpers.Egp(p.TotalAmount)</td>
-            <td>
-                <a asp-action="Details" asp-route-id="@p.Id" class="btn btn-sm btn-outline-info">Details</a>
-                <a asp-action="DownloadReceipt" asp-route-id="@p.Id" class="btn btn-sm btn-outline-primary"><i class="bi bi-file-pdf"></i></a>
-            </td>
-        </tr>
-    }
-    </tbody>
-</table>
-</div>

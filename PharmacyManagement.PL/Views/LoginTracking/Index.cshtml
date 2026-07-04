@@ -1,45 +1,59 @@
 @model IEnumerable<PharmacyManagement.DAL.Data.Entities.UserActivity>
 @{
     ViewData["Title"] = "User Login History";
+    ViewData["PageTitle"] = "Login Tracking";
+    ViewData["PageIcon"] = "bi-person-lines-fill";
 }
+<partial name="_PageHeader" />
 
-<div class="page-header d-flex justify-content-between align-items-center">
-    <h2><i class="bi bi-person-lines-fill"></i> User Login History</h2>
-</div>
-
-<div class="content-card">
-    <table class="table table-pharmacy">
-        <thead>
-            <tr>
-                <th>User</th>
-                <th>Login Time</th>
-                <th>Logout Time</th>
-                <th>Status</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var act in Model)
-            {
+<div class="content-card p-0 overflow-hidden shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-enterprise mb-0">
+            <thead>
                 <tr>
-                    <td>@act.User?.UserName</td>
-                    <td>@DateDisplayHelper.FormatShortDateTime(act.LoginTime)</td>
-                    <td>@(act.LogoutTime.HasValue ? DateDisplayHelper.FormatShortDateTime(act.LogoutTime.Value) : "-")</td>
-                    <td>
-                        @if (act.IsSuccess)
-                        {
-                            <span class="badge bg-success">Success</span>
-                            @if (act.LogoutTime == null)
-                            {
-                                <span class="badge bg-info">Active</span>
-                            }
-                        }
-                        else
-                        {
-                            <span class="badge bg-danger" title="@act.FailureReason">Failed</span>
-                        }
-                    </td>
+                    <th>User Account</th>
+                    <th>Login Timestamp</th>
+                    <th>Logout Timestamp</th>
+                    <th class="text-center">Session Status</th>
                 </tr>
-            }
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                @if(!Model.Any()) {
+                    <tr><td colspan="4" class="text-center p-5 text-muted"><i class="bi bi-box-arrow-in-right fs-2 d-block mb-2 opacity-50"></i>No login history found.</td></tr>
+                }
+                @foreach (var act in Model)
+                {
+                    <tr class="bg-white">
+                        <td class="fw-bold text-dark">
+                            <div class="d-flex align-items-center">
+                                <div class="rounded-circle bg-light d-flex align-items-center justify-content-center me-3 border text-primary" style="width: 32px; height: 32px;">
+                                    <i class="bi bi-person-fill"></i>
+                                </div>
+                                @(act.User?.UserName ?? "Unknown User")
+                            </div>
+                        </td>
+                        <td class="fw-medium text-dark">@DateDisplayHelper.FormatShortDateTime(act.LoginTime)</td>
+                        <td class="text-muted">@(act.LogoutTime.HasValue ? DateDisplayHelper.FormatShortDateTime(act.LogoutTime.Value) : "Active Session")</td>
+                        <td class="text-center">
+                            @if (act.IsSuccess)
+                            {
+                                @if (act.LogoutTime == null)
+                                {
+                                    <span class="badge bg-success border shadow-sm px-3 py-1">Active Now</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-light text-success border border-success-subtle px-3 py-1">Completed</span>
+                                }
+                            }
+                            else
+                            {
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-1" title="@act.FailureReason"><i class="bi bi-x-circle me-1"></i> Failed</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 </div>

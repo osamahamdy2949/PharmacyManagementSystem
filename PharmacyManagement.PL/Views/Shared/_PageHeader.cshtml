@@ -2,11 +2,24 @@
     var title = ViewData["PageTitle"] as string ?? ViewData["Title"]?.ToString() ?? "";
     var addUrl = ViewData["AddUrl"] as string;
     var addText = ViewData["AddText"] as string ?? "Add New";
+    var icon = ViewData["PageIcon"] as string;
 }
-<div class="page-header">
-    <h2>@title</h2>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="h3 fw-bold mb-1 text-dark">
+            @if (!string.IsNullOrEmpty(icon))
+            {
+                <i class="bi @icon me-2 text-primary"></i>
+            }
+            @title
+        </h2>
+    </div>
     @if (!string.IsNullOrEmpty(addUrl))
     {
-        <a href="@addUrl" class="btn btn-pharmacy"><i class="bi bi-plus-lg"></i> @addText</a>
+        <div>
+            <a href="@addUrl" class="btn btn-primary fw-bold shadow-sm">
+                <i class="bi bi-plus-lg me-2"></i> @addText
+            </a>
+        </div>
     }
 </div>

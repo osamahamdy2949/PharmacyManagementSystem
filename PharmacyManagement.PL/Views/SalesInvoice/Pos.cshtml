@@ -1,141 +1,156 @@
 @model PosPageViewModel
-@{ ViewData["Title"] = "New Sale"; ViewData["PageTitle"] = "Point of Sale"; }
-<div class="page-header mb-4 border-bottom pb-3">
-    <h2 class="fw-bold text-primary"><i class="bi bi-cart-plus-fill me-2 opacity-75"></i> Point of Sale</h2>
-    <p class="text-muted mb-0">Quickly add medicines and checkout customers.</p>
+@{ 
+    ViewData["Title"] = "New Sale"; 
+    ViewData["PageTitle"] = "Point of Sale"; 
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="h3 fw-bold mb-1 text-dark"><i class="bi bi-shop me-2 text-primary"></i> Point of Sale</h2>
+        <p class="text-muted mb-0">Search medicines, build cart, and process checkout.</p>
+    </div>
 </div>
 @Html.AntiForgeryToken()
 
-<div class="row g-4">
-    <!-- Left Column: Search & Add -->
-    <div class="col-lg-5">
-        <div class="content-card h-100 d-flex flex-column">
-            <h5 class="fw-bold mb-3 text-secondary"><i class="bi bi-search me-2"></i> Find Medicine</h5>
-            <div class="position-relative mb-3">
-                <input type="search" id="medicineSearch" class="form-control form-control-lg border-primary shadow-sm" placeholder="Scan barcode or type name..." style="padding-left: 2.5rem; border-width: 2px;" autocomplete="off" />
-                <i class="bi bi-upc-scan position-absolute text-muted fs-4" style="top: 50%; transform: translateY(-50%); left: 12px;"></i>
+<div class="row g-4 h-100 pb-4">
+    <!-- Left Area: Customer & Search -->
+    <div class="col-xl-8 col-lg-7 d-flex flex-column gap-4">
+        
+        <!-- Customer Details Panel -->
+        <div class="content-card p-4 border-top border-primary border-4 shadow-sm">
+            <h6 class="text-uppercase fw-bold text-muted mb-3" style="font-size: 0.75rem; letter-spacing: 0.05em;">Transaction Details</h6>
+            <div class="row g-3">
+                <div class="col-md-4 form-floating">
+                    <select id="customerId" class="form-select shadow-none border-primary-subtle">
+                        <option value="">-- New Customer --</option>
+                        @foreach (var c in Model.Customers)
+                        {
+                            <option value="@c.Id">@c.Name</option>
+                        }
+                    </select>
+                    <label for="customerId">Customer Account</label>
+                </div>
+                <div class="col-md-4 form-floating">
+                    <input type="text" id="customerName" class="form-control shadow-none" placeholder="Required if new" />
+                    <label for="customerName">Customer Name</label>
+                </div>
+                <div class="col-md-4 form-floating">
+                    <input type="text" id="customerPhone" class="form-control shadow-none" placeholder="Optional" />
+                    <label for="customerPhone">Phone Number</label>
+                </div>
+                <div class="col-md-3 form-floating">
+                    <input type="date" id="invoiceDate" class="form-control shadow-none" value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                    <label for="invoiceDate">Invoice Date</label>
+                </div>
+                <div class="col-md-3 form-floating">
+                    <input type="text" id="doctorName" class="form-control shadow-none" placeholder="Optional" />
+                    <label for="doctorName">Doctor Name</label>
+                </div>
+                <div class="col-md-3 form-floating">
+                    <select id="saleType" class="form-select shadow-none border-warning-subtle">
+                        <option value="0">Cash</option>
+                        <option value="1">Credit</option>
+                    </select>
+                    <label for="saleType">Payment Method</label>
+                </div>
+                <div class="col-md-3 form-floating" id="paidAmountContainer" style="display: none;">
+                    <input type="number" id="paidAmount" class="form-control shadow-none fw-bold text-success" step="0.01" min="0" value="0.00" />
+                    <label for="paidAmount">Amount Paid</label>
+                </div>
+                <div class="col-12"><div id="customerError" class="text-danger small fw-bold"></div></div>
+            </div>
+        </div>
+
+        <!-- Search & Add Panel -->
+        <div class="content-card flex-grow-1 d-flex flex-column p-0 overflow-hidden shadow-sm">
+            <div class="bg-light p-4 border-bottom">
+                <div class="position-relative">
+                    <input type="search" id="medicineSearch" class="form-control form-control-lg border-2 border-primary shadow-sm" placeholder="Scan barcode or search medicine name..." style="padding-left: 3rem; height: 3.5rem;" autocomplete="off" />
+                    <i class="bi bi-upc-scan position-absolute text-muted" style="top: 50%; transform: translateY(-50%); left: 1rem; font-size: 1.25rem;"></i>
+                </div>
             </div>
             
-            <div id="searchResults" class="list-group mb-3 border-0 shadow-sm" style="max-height: 250px; overflow-y: auto;"></div>
+            <!-- Live Search Results -->
+            <div id="searchResults" class="list-group list-group-flush border-0" style="max-height: 300px; overflow-y: auto;"></div>
             
-            <div id="addPanel" class="mt-auto border rounded-3 p-4 bg-light shadow-sm d-none position-relative overflow-hidden">
+            <!-- Item Configurator (Hidden by default) -->
+            <div id="addPanel" class="p-4 bg-white d-none position-relative">
                 <div class="position-absolute top-0 start-0 w-100 bg-primary" style="height: 4px;"></div>
                 <div class="d-flex justify-content-between align-items-start mb-2">
                     <div>
-                        <h4 class="fw-bold mb-0 text-dark" id="selName"></h4>
+                        <h4 class="fw-bold mb-1 text-dark" id="selName"></h4>
                         <span class="badge bg-secondary mb-2" id="selDose"></span>
+                        <p class="small text-muted mb-0" id="selMeta"></p>
                     </div>
                 </div>
-                <p class="small text-muted mb-3" id="selMeta"></p>
                 
-                <div class="row g-3 align-items-end mb-3">
-                    <div class="col-6">
-                        <label class="form-label fw-bold text-secondary small">Quantity (<span id="selUnit"></span>)</label>
-                        <input type="number" id="selQty" class="form-control form-control-lg fw-bold text-center" min="1" value="1" />
+                <div class="row g-3 align-items-end mt-2 mb-3">
+                    <div class="col-md-3 form-floating">
+                        <input type="number" id="selQty" class="form-control fw-bold text-center fs-5" min="1" value="1" />
+                        <label for="selQty">Quantity (<span id="selUnit"></span>)</label>
                     </div>
-                    <div class="col-6">
-                        <label class="form-label fw-bold text-secondary small">Unit Price</label>
-                        <input type="text" id="selPrice" class="form-control form-control-lg fw-bold text-center bg-white" readonly />
+                    <div class="col-md-3 form-floating">
+                        <input type="text" id="selPrice" class="form-control fw-bold text-center bg-light" readonly />
+                        <label for="selPrice">Unit Price</label>
                     </div>
-                    <div class="col-12">
-                        <label class="form-label fw-bold text-secondary small">Batch <small class="fw-normal text-muted">(leave empty for FEFO)</small></label>
+                    <div class="col-md-6 form-floating">
                         <select id="selBatch" class="form-select border-secondary-subtle">
                             <option value="">FEFO — auto oldest expiry</option>
                         </select>
+                        <label for="selBatch">Batch Selection</label>
                     </div>
                 </div>
-                <div id="addError" class="text-danger small fw-bold mt-1 mb-2"></div>
-                <button type="button" id="addToCartBtn" class="btn btn-pharmacy btn-lg w-100 shadow-sm"><i class="bi bi-cart-plus me-2"></i> Add to Invoice</button>
+                <div id="addError" class="text-danger small fw-bold mb-3"></div>
+                <div class="text-end">
+                    <button type="button" class="btn btn-light me-2" onclick="document.getElementById('addPanel').classList.add('d-none'); document.getElementById('medicineSearch').focus();">Cancel</button>
+                    <button type="button" id="addToCartBtn" class="btn btn-primary px-4 fw-bold shadow-sm"><i class="bi bi-plus-lg me-2"></i>Add to Cart</button>
+                </div>
+            </div>
+
+            <!-- Empty state when no search -->
+            <div id="searchEmptyState" class="text-center p-5 text-muted flex-grow-1 d-flex flex-column justify-content-center">
+                <i class="bi bi-search fs-1 opacity-25 mb-3"></i>
+                <h6>Ready to scan or search</h6>
+                <p class="small mb-0">Use the search bar above to find products.</p>
             </div>
         </div>
     </div>
 
-    <!-- Right Column: Cart & Checkout -->
-    <div class="col-lg-7">
-        <div class="content-card d-flex flex-column h-100">
-            <!-- Customer Details -->
-            <div class="bg-light rounded-3 p-3 mb-4 border border-secondary-subtle">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label fw-bold text-secondary small">Existing Customer</label>
-                        <select id="customerId" class="form-select shadow-none">
-                            <option value="">-- New Customer --</option>
-                            @foreach (var c in Model.Customers)
-                            {
-                                <option value="@c.Id">@c.Name</option>
-                            }
-                        </select>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-bold text-secondary small">Invoice Date</label>
-                        <input type="date" id="invoiceDate" class="form-control shadow-none" value="@DateTime.Today.ToString("yyyy-MM-dd")" />
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label fw-bold text-secondary small">Customer Name</label>
-                        <input type="text" id="customerName" class="form-control shadow-none" placeholder="Required if new" />
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label fw-bold text-secondary small">Phone</label>
-                        <input type="text" id="customerPhone" class="form-control shadow-none" placeholder="Optional" />
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label fw-bold text-secondary small">Doctor Name</label>
-                        <input type="text" id="doctorName" class="form-control shadow-none" placeholder="Optional" />
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label fw-bold text-secondary small">Sale Type</label>
-                        <select id="saleType" class="form-select shadow-none">
-                            <option value="0">Cash</option>
-                            <option value="1">Credit</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4" id="paidAmountContainer" style="display: none;">
-                        <label class="form-label fw-bold text-secondary small">Amount Paid</label>
-                        <input type="number" id="paidAmount" class="form-control shadow-none fw-bold text-success" step="0.01" min="0" value="0.00" />
-                    </div>
-                    <div class="col-12"><div id="customerError" class="text-danger small fw-bold mt-1"></div></div>
+    <!-- Right Sidebar: Live Cart -->
+    <div class="col-xl-4 col-lg-5">
+        <div class="content-card d-flex flex-column p-0 h-100 shadow-lg border-0 overflow-hidden" style="position: sticky; top: 1rem; max-height: calc(100vh - 8rem);">
+            
+            <div class="bg-dark text-white p-4">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-cart3 me-2"></i> Current Order</h5>
+                    <span class="badge bg-white text-dark rounded-pill px-3 py-1 fw-bold"><span id="itemCount">0</span> items</span>
                 </div>
-            </div>
-
-            <!-- Cart Table -->
-            <div class="d-flex justify-content-between align-items-end mb-2">
-                <h5 class="fw-bold text-secondary mb-0"><i class="bi bi-receipt me-2"></i> Current Invoice</h5>
-                <span class="badge bg-primary rounded-pill fs-6 px-3 py-2"><span id="itemCount">0</span> items</span>
             </div>
             
-            <div class="table-responsive flex-grow-1 mb-4 shadow-sm border rounded" style="min-height: 250px;">
-                <table class="table table-pharmacy table-hover mb-0" id="cartTable">
-                    <thead class="bg-light">
-                        <tr>
-                            <th>Medicine</th>
-                            <th>Dose</th>
-                            <th class="text-center">Qty</th>
-                            <th class="text-end">Price</th>
-                            <th class="text-end">Subtotal</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody id="cartBody"></tbody>
-                </table>
-                <div id="cartEmpty" class="text-center text-muted p-5 w-100">
+            <div class="flex-grow-1 overflow-auto bg-light">
+                <div class="table-responsive">
+                    <table class="table table-enterprise mb-0" id="cartTable">
+                        <tbody id="cartBody"></tbody>
+                    </table>
+                </div>
+                <div id="cartEmpty" class="text-center text-muted p-5 w-100 h-100 flex-column justify-content-center align-items-center bg-white d-flex">
                     <i class="bi bi-cart-x fs-1 opacity-25 d-block mb-3"></i>
-                    <p class="mb-0 fw-medium">No items yet. Search and add medicines.</p>
+                    <p class="mb-0 fw-medium">Cart is empty.</p>
                 </div>
             </div>
 
-            <!-- Checkout Area -->
-            <div class="mt-auto bg-white rounded-3 p-4 border shadow-sm">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <span class="text-muted text-uppercase fw-bold letter-spacing-1 small d-block mb-1">Grand Total</span>
-                        <h2 class="mb-0 fw-bold text-primary" id="invoiceTotal">0.00 L.E</h2>
-                    </div>
-                    <button type="button" id="checkoutBtn" class="btn btn-pharmacy btn-lg px-5 shadow" disabled>
-                        <i class="bi bi-check-circle-fill me-2"></i> Complete Sale
-                    </button>
+            <div class="bg-white p-4 border-top">
+                <div class="d-flex justify-content-between align-items-end mb-3">
+                    <span class="text-muted text-uppercase fw-bold" style="font-size: 0.8rem; letter-spacing: 0.05em;">Total Due</span>
+                    <h2 class="mb-0 fw-bold text-primary" id="invoiceTotal">0.00 L.E</h2>
                 </div>
-                <div id="checkoutError" class="alert alert-danger mt-3 mb-0 d-none border-0 shadow-sm"><i class="bi bi-exclamation-triangle-fill me-2"></i><span class="msg"></span></div>
-                <div id="checkoutSuccess" class="alert alert-success mt-3 mb-0 d-none border-0 shadow-sm"><i class="bi bi-check-circle-fill me-2"></i><span class="msg"></span></div>
+                
+                <div id="checkoutError" class="alert alert-danger mb-3 d-none p-2 small"><i class="bi bi-exclamation-triangle-fill me-2"></i><span class="msg"></span></div>
+                <div id="checkoutSuccess" class="alert alert-success mb-3 d-none p-2 small"><i class="bi bi-check-circle-fill me-2"></i><span class="msg"></span></div>
+                
+                <button type="button" id="checkoutBtn" class="btn btn-primary btn-lg w-100 py-3 shadow-sm fw-bold fs-5 d-flex justify-content-center align-items-center" disabled>
+                    <i class="bi bi-credit-card me-2"></i> Pay & Complete
+                </button>
             </div>
         </div>
     </div>
@@ -156,18 +171,29 @@
         let total = 0;
         cart.forEach((item, idx) => {
             total += item.subtotal;
-            body.innerHTML += `<tr>
-                <td><span class="fw-bold text-dark">${item.medicineName}</span><br><small class="text-muted">${item.serialNumber}</small></td>
-                <td><span class="badge bg-light text-dark border">${item.dose}</span></td>
-                <td class="text-center fw-bold">${item.quantity} <small class="text-muted fw-normal">${item.saleUnit}</small></td>
-                <td class="text-end">${formatMoney(item.unitPrice)}</td>
-                <td class="text-end fw-bold text-primary">${formatMoney(item.subtotal)}</td>
-                <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger rounded-circle p-1" style="width:28px;height:28px;" onclick="removeItem(${idx})"><i class="bi bi-x-lg" style="font-size:0.75rem;"></i></button></td>
+            body.innerHTML += `
+            <tr class="bg-white">
+                <td class="p-3">
+                    <div class="d-flex justify-content-between align-items-start mb-1">
+                        <span class="fw-bold text-dark d-block text-truncate" style="max-width: 180px;">${item.medicineName}</span>
+                        <button type="button" class="btn btn-link text-danger p-0 ms-2" onclick="removeItem(${idx})"><i class="bi bi-trash3-fill"></i></button>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-2">
+                        <span class="badge bg-light text-dark border">${item.quantity} x ${formatMoney(item.unitPrice)}</span>
+                        <span class="fw-bold text-primary">${formatMoney(item.subtotal)}</span>
+                    </div>
+                </td>
             </tr>`;
         });
         document.getElementById('itemCount').textContent = cart.length;
         document.getElementById('invoiceTotal').textContent = formatMoney(total);
-        document.getElementById('cartEmpty').style.display = cart.length ? 'none' : 'block';
+        if (cart.length > 0) {
+            document.getElementById('cartEmpty').classList.remove('d-flex');
+            document.getElementById('cartEmpty').classList.add('d-none');
+        } else {
+            document.getElementById('cartEmpty').classList.remove('d-none');
+            document.getElementById('cartEmpty').classList.add('d-flex');
+        }
         document.getElementById('checkoutBtn').disabled = cart.length === 0;
     }
 
@@ -191,20 +217,32 @@
 
     document.getElementById('medicineSearch').addEventListener('input', async (e) => {
         const q = e.target.value.trim();
-        if (q.length < 1) { document.getElementById('searchResults').innerHTML = ''; return; }
+        const emptyState = document.getElementById('searchEmptyState');
+        const addPanel = document.getElementById('addPanel');
+        
+        if (q.length < 1) { 
+            document.getElementById('searchResults').innerHTML = ''; 
+            emptyState.classList.remove('d-none');
+            return; 
+        }
+        
+        emptyState.classList.add('d-none');
+        addPanel.classList.add('d-none');
+
         const res = await fetch(`@Url.Action("SearchMedicines")?q=${encodeURIComponent(q)}`);
         const data = await res.json();
         const list = document.getElementById('searchResults');
         list.innerHTML = data.map(m => `
-            <button type="button" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3" data-id='${JSON.stringify(m).replace(/'/g, "&#39;")}'>
+            <button type="button" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3 px-4 border-bottom" data-id='${JSON.stringify(m).replace(/'/g, "&#39;")}' style="transition: background-color 0.15s;">
                 <div>
                     <h6 class="mb-1 fw-bold text-dark">${m.tradeName} <span class="badge bg-light text-dark border ms-2">${m.dose}</span></h6>
                     <small class="text-muted">${m.medicineForm} · ${formatMoney(m.sellingPrice)}/${m.saleUnit}</small>
                 </div>
-                <span class="badge ${m.quantityInStock > 0 ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-danger-subtle text-danger border border-danger-subtle'} rounded-pill">
-                    Stock: ${m.quantityInStock}
+                <span class="badge ${m.quantityInStock > 0 ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-danger-subtle text-danger border border-danger-subtle'} rounded-pill px-3 py-2">
+                    ${m.quantityInStock} in stock
                 </span>
             </button>`).join('');
+            
         list.querySelectorAll('button').forEach(btn => btn.addEventListener('click', () => {
             selectMedicine(JSON.parse(btn.dataset.id));
             document.getElementById('searchResults').innerHTML = '';
@@ -214,6 +252,7 @@
 
     function selectMedicine(m) {
         selected = m;
+        document.getElementById('searchEmptyState').classList.add('d-none');
         document.getElementById('addPanel').classList.remove('d-none');
         document.getElementById('selName').textContent = m.tradeName;
         document.getElementById('selDose').textContent = m.dose;
@@ -221,9 +260,11 @@
         document.getElementById('selUnit').textContent = m.saleUnit;
         document.getElementById('selPrice').value = formatMoney(m.sellingPrice);
         document.getElementById('selQty').max = m.quantityInStock;
+        
         const batchSel = document.getElementById('selBatch');
         batchSel.innerHTML = '<option value="">FEFO — auto oldest expiry</option>' +
             (m.batches || []).map(b => `<option value="${b.batchId}" data-price="${b.sellingPrice}" data-qty="${b.quantityInStock}">${b.batchNumber} — exp ${b.expiryDate.split('T')[0]} (${b.quantityInStock} ${m.saleUnit})</option>`).join('');
+        
         batchSel.onchange = () => {
             const opt = batchSel.selectedOptions[0];
             if (opt && opt.value) {
@@ -234,6 +275,7 @@
                 document.getElementById('selQty').max = m.quantityInStock;
             }
         };
+        
         document.getElementById('addError').textContent = '';
         document.getElementById('selQty').focus();
         document.getElementById('selQty').select();
@@ -248,18 +290,22 @@
         const maxStock = batchId && batchOpt ? parseInt(batchOpt.dataset.qty, 10) : selected.quantityInStock;
         const err = document.getElementById('addError');
         err.textContent = '';
+        
         if (!qty || qty <= 0) { err.textContent = 'Quantity must be greater than zero.'; return; }
         if (qty > maxStock) {
             err.textContent = `Cannot sell ${qty}. Only ${maxStock} in stock.`;
             return;
         }
+        
         const key = `${selected.id}|${selected.dose}|${batchId || ''}`;
         const existing = cart.find(c => cartKey(c) === key);
         const newTotal = (existing ? existing.quantity : 0) + qty;
+        
         if (newTotal > maxStock) {
             err.textContent = `Total quantity (${newTotal}) exceeds stock (${maxStock}).`;
             return;
         }
+        
         if (existing) {
             existing.quantity += qty;
             existing.subtotal = existing.quantity * existing.unitPrice;
@@ -277,9 +323,11 @@
                 availableStock: maxStock
             });
         }
+        
         renderCart();
         document.getElementById('selQty').value = 1;
         document.getElementById('addPanel').classList.add('d-none');
+        document.getElementById('searchEmptyState').classList.remove('d-none');
         document.getElementById('medicineSearch').focus();
     });
 
@@ -293,7 +341,7 @@
         const customerId = parseInt(document.getElementById('customerId').value, 10) || 0;
         const customerName = document.getElementById('customerName').value.trim();
         if (!customerId && !customerName) {
-            document.getElementById('customerError').textContent = 'Select a customer or enter a customer name.';
+            document.getElementById('customerError').textContent = 'Select a customer or enter a name.';
             return;
         }
 
@@ -302,6 +350,11 @@
         if (saleType === 1) {
             paidAmount = parseFloat(document.getElementById('paidAmount').value) || 0;
         }
+
+        const btn = document.getElementById('checkoutBtn');
+        const originalBtnHTML = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Processing...';
 
         const payload = {
             customerId,
@@ -323,24 +376,32 @@
             }))
         };
 
-        const res = await fetch('@Url.Action("Checkout")', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
-            body: JSON.stringify(payload)
-        });
-        const data = await res.json();
-        if (!res.ok || !data.success) {
-            errBox.querySelector('.msg').textContent = data.message || 'Checkout failed.';
+        try {
+            const res = await fetch('@Url.Action("Checkout")', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            
+            if (!res.ok || !data.success) {
+                errBox.querySelector('.msg').textContent = data.message || 'Checkout failed.';
+                errBox.classList.remove('d-none');
+            } else {
+                okBox.querySelector('.msg').innerHTML = `Success! Invoice #${data.invoiceId} <a href="${data.receiptUrl}" class="alert-link fw-bold text-decoration-underline ms-2">Download Receipt</a>`;
+                okBox.classList.remove('d-none');
+                cart = [];
+                renderCart();
+                document.getElementById('customerId').value = '';
+                document.getElementById('customerName').value = '';
+            }
+        } catch(e) {
+            errBox.querySelector('.msg').textContent = 'Network error during checkout.';
             errBox.classList.remove('d-none');
-            return;
+        } finally {
+            btn.innerHTML = originalBtnHTML;
+            if(cart.length > 0) btn.disabled = false;
         }
-        okBox.querySelector('.msg').innerHTML = `Sale completed! Invoice #${data.invoiceId} · Total: ${formatMoney(data.total)} · <a href="${data.receiptUrl}" class="alert-link fw-bold text-decoration-underline ms-2">Download receipt PDF</a>`;
-        okBox.classList.remove('d-none');
-        cart = [];
-        renderCart();
-        document.getElementById('searchResults').innerHTML = '';
-        document.getElementById('addPanel').classList.add('d-none');
-        document.getElementById('medicineSearch').focus();
     });
 </script>
 }

@@ -1,79 +1,103 @@
 @model IEnumerable<PaymentViewModel>
-@{ ViewData["Title"] = "Payment History"; ViewData["PageTitle"] = "Payments"; }
+@{ ViewData["Title"] = "Payment History"; ViewData["PageTitle"] = "Payments"; ViewData["PageIcon"] = "bi-wallet2"; }
 @{ var filter = ViewBag.Filter as PaymentHistoryFilterViewModel ?? new PaymentHistoryFilterViewModel(); }
 @{ var customers = ViewBag.Customers as IEnumerable<CustomerViewModel> ?? new List<CustomerViewModel>(); }
 
-<div class="content-card mb-4">
-    <form method="get" class="row g-3 align-items-end">
-        <div class="col-md-3">
-            <label asp-for="@filter.CustomerId" class="form-label">Customer</label>
-            <select asp-for="@filter.CustomerId" class="form-select" asp-items="@(new SelectList(customers, "Id", "Name", filter.CustomerId))">
-                <option value="">All Customers</option>
-            </select>
-        </div>
-        <div class="col-md-3">
-            <label asp-for="@filter.FromDate" class="form-label">From Date</label>
-            <input asp-for="@filter.FromDate" type="date" class="form-control" />
-        </div>
-        <div class="col-md-3">
-            <label asp-for="@filter.ToDate" class="form-label">To Date</label>
-            <input asp-for="@filter.ToDate" type="date" class="form-control" />
-        </div>
-        <div class="col-md-3">
-            <button type="submit" class="btn btn-primary w-100"><i class="bi bi-search me-2"></i> Search</button>
+<partial name="_PageHeader" />
+
+<div class="content-card mb-4 p-0 shadow-sm border-0 bg-transparent">
+    <form method="get">
+        <div class="d-flex flex-wrap gap-3 align-items-end p-3 bg-white rounded border">
+            <div class="flex-grow-1" style="min-width: 250px;">
+                <label asp-for="@filter.CustomerId" class="form-label text-muted fw-bold small text-uppercase">Customer</label>
+                <div class="form-floating">
+                    <select asp-for="@filter.CustomerId" class="form-select bg-light border-0" asp-items="@(new SelectList(customers, "Id", "Name", filter.CustomerId))">
+                        <option value="">All Customers</option>
+                    </select>
+                    <label asp-for="@filter.CustomerId">Select Customer</label>
+                </div>
+            </div>
+            <div class="flex-grow-1" style="min-width: 150px;">
+                <label asp-for="@filter.FromDate" class="form-label text-muted fw-bold small text-uppercase">From Date</label>
+                <div class="position-relative">
+                    <i class="bi bi-calendar position-absolute text-muted" style="top: 50%; transform: translateY(-50%); left: 1rem;"></i>
+                    <input asp-for="@filter.FromDate" type="date" class="form-control bg-light border-0 py-3" style="padding-left: 2.5rem;" />
+                </div>
+            </div>
+            <div class="flex-grow-1" style="min-width: 150px;">
+                <label asp-for="@filter.ToDate" class="form-label text-muted fw-bold small text-uppercase">To Date</label>
+                <div class="position-relative">
+                    <i class="bi bi-calendar position-absolute text-muted" style="top: 50%; transform: translateY(-50%); left: 1rem;"></i>
+                    <input asp-for="@filter.ToDate" type="date" class="form-control bg-light border-0 py-3" style="padding-left: 2.5rem;" />
+                </div>
+            </div>
+            <div>
+                <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm" style="height: 58px;">
+                    <i class="bi bi-search me-2"></i> Search
+                </button>
+            </div>
         </div>
     </form>
 </div>
 
-<div class="content-card">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5 class="mb-0">Payment Records</h5>
-        <a asp-action="RecordPayment" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i> Record Payment</a>
+<div class="content-card p-0 overflow-hidden shadow-sm">
+    <div class="bg-light p-3 border-bottom d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 fw-bold text-muted text-uppercase" style="font-size: 0.8rem; letter-spacing: 0.05em;"><i class="bi bi-journal-text me-2"></i> Payment Records</h6>
+        <a asp-action="RecordPayment" class="btn btn-sm btn-primary fw-bold shadow-sm"><i class="bi bi-plus-lg me-1"></i> Record Payment</a>
     </div>
 
-    <table class="table table-pharmacy table-striped">
-        <thead>
-            <tr>
-                <th>Receipt #</th>
-                <th>Date</th>
-                <th>Customer</th>
-                <th>Amount</th>
-                <th>Method</th>
-                <th>Received By</th>
-                <th>Invoice Ref</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var p in Model)
-            {
+    <div class="table-responsive">
+        <table class="table table-enterprise mb-0">
+            <thead>
                 <tr>
-                    <td>@p.Id</td>
-                    <td>
-                        <div class="d-flex flex-column">
-                            <span>@DisplayHelpers.Date(p.PaymentDate)</span>
-                            <small class="text-muted">@p.PaymentDate.ToString("t")</small>
-                        </div>
-                    </td>
-                    <td>
-                        <a asp-controller="Customer" asp-action="Profile" asp-route-id="@p.CustomerId" class="text-decoration-none fw-bold">@p.CustomerName</a>
-                    </td>
-                    <td class="fw-bold text-success">@DisplayHelpers.Egp(p.AmountPaid)</td>
-                    <td><span class="badge bg-info text-dark">@p.PaymentMethod</span></td>
-                    <td><span class="badge bg-light text-dark border"><i class="bi bi-person me-1"></i> @p.RecordedByUserName</span></td>
-                    <td>
-                        @if (p.SalesInvoiceId.HasValue)
-                        {
-                            <a asp-controller="SalesInvoice" asp-action="Details" asp-route-id="@p.SalesInvoiceId" class="text-decoration-none">
-                                <i class="bi bi-file-earmark-text me-1"></i> #@p.SalesInvoiceId
-                            </a>
-                        }
-                        else
-                        {
-                            <span class="text-muted fst-italic">General</span>
-                        }
-                    </td>
+                    <th>Receipt #</th>
+                    <th>Date & Time</th>
+                    <th>Customer Name</th>
+                    <th class="text-end">Amount Received</th>
+                    <th class="text-center">Method</th>
+                    <th>Recorded By</th>
+                    <th>Invoice Ref</th>
                 </tr>
-            }
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                @if(!Model.Any()) {
+                    <tr><td colspan="7" class="text-center p-5 text-muted"><i class="bi bi-cash-stack fs-2 d-block mb-2 opacity-50"></i>No payment records found.</td></tr>
+                }
+                @foreach (var p in Model)
+                {
+                    <tr class="bg-white">
+                        <td class="fw-bold text-dark">#@p.Id</td>
+                        <td>
+                            <span class="d-block text-dark fw-medium">@DisplayHelpers.Date(p.PaymentDate)</span>
+                            <small class="text-muted">@p.PaymentDate.ToString("t")</small>
+                        </td>
+                        <td>
+                            <a asp-controller="Customer" asp-action="Profile" asp-route-id="@p.CustomerId" class="text-decoration-none fw-bold text-primary">@p.CustomerName</a>
+                        </td>
+                        <td class="text-end fw-bold text-success">@DisplayHelpers.Egp(p.AmountPaid)</td>
+                        <td class="text-center">
+                            @if(p.PaymentMethod == "Cash") {
+                                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i class="bi bi-cash me-1"></i> Cash</span>
+                            } else {
+                                <span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1"><i class="bi bi-credit-card me-1"></i> @p.PaymentMethod</span>
+                            }
+                        </td>
+                        <td><span class="badge bg-light text-dark border px-2 py-1"><i class="bi bi-person me-1"></i> @p.RecordedByUserName</span></td>
+                        <td>
+                            @if (p.SalesInvoiceId.HasValue)
+                            {
+                                <a asp-controller="SalesInvoice" asp-action="Details" asp-route-id="@p.SalesInvoiceId" class="text-decoration-none text-secondary">
+                                    <i class="bi bi-receipt me-1"></i> Inv #@p.SalesInvoiceId
+                                </a>
+                            }
+                            else
+                            {
+                                <span class="text-muted fst-italic">General Account Payment</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 </div>

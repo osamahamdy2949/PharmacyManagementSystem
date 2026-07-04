@@ -26,59 +26,63 @@ public class DashboardService : IDashboardService
         var nextMonthStart = thisMonthStart.AddMonths(1);
 
         var todaySales = await _unitOfWork.GetRepository<SalesInvoice>().Query()
-            .Where(s => s.CreatedAt >= today && s.CreatedAt < tomorrow)
+            .Where(s => s.InvoiceDate >= today && s.InvoiceDate < tomorrow)
             .ToListAsync();
         vm.TodaySales = todaySales.Sum(s => s.TotalAmount);
 
         var todayPurchases = await _unitOfWork.GetRepository<PurchaseInvoice>().Query()
-            .Where(p => p.CreatedAt >= today && p.CreatedAt < tomorrow)
+            .Where(p => p.InvoiceDate >= today && p.InvoiceDate < tomorrow)
             .ToListAsync();
         vm.TodayPurchases = todayPurchases.Sum(p => p.TotalAmount);
 
-        var todayItems = await _unitOfWork.Context.Set<SalesInvoiceItem>()
-            .Include(i => i.Medicine)
-            .Where(i => i.SalesInvoice.CreatedAt >= today && i.SalesInvoice.CreatedAt < tomorrow)
-            .ToListAsync();
-        vm.TodayProfit = todayItems.Sum(i => (i.UnitPrice - i.Medicine.PurchasePrice) * i.Quantity);
+        vm.TodayProfit = vm.TodaySales - vm.TodayPurchases;
 
         var monthSales = await _unitOfWork.GetRepository<SalesInvoice>().Query()
-            .Where(s => s.CreatedAt >= thisMonthStart && s.CreatedAt < nextMonthStart)
+            .Where(s => s.InvoiceDate >= thisMonthStart && s.InvoiceDate < nextMonthStart)
             .ToListAsync();
         vm.MonthlySales = monthSales.Sum(s => s.TotalAmount);
 
         var monthPurchases = await _unitOfWork.GetRepository<PurchaseInvoice>().Query()
-            .Where(p => p.CreatedAt >= thisMonthStart && p.CreatedAt < nextMonthStart)
+            .Where(p => p.InvoiceDate >= thisMonthStart && p.InvoiceDate < nextMonthStart)
             .ToListAsync();
         vm.MonthlyPurchases = monthPurchases.Sum(p => p.TotalAmount);
 
-        var monthItems = await _unitOfWork.Context.Set<SalesInvoiceItem>()
-            .Include(i => i.Medicine)
-            .Where(i => i.SalesInvoice.CreatedAt >= thisMonthStart && i.SalesInvoice.CreatedAt < nextMonthStart)
-            .ToListAsync();
-        vm.MonthlyProfit = monthItems.Sum(i => (i.UnitPrice - i.Medicine.PurchasePrice) * i.Quantity);
+        vm.MonthlyProfit = vm.MonthlySales - vm.MonthlyPurchases;
 
         vm.TotalCustomers = await _unitOfWork.GetRepository<Customer>().Query().CountAsync();
         vm.OutstandingDebt = await _unitOfWork.GetRepository<Customer>().Query().SumAsync(c => c.RemainingBalance);
         vm.TotalProducts = await _unitOfWork.GetRepository<Medicine>().Query().CountAsync();
 
-        var allMedicines = await _unitOfWork.Context.Set<Medicine>().Include(m => m.MedicineBatches).ToListAsync();
-        vm.LowStockItems = allMedicines.Count(m => m.MedicineBatches.Sum(b => b.CurrentQuantity) == 0);
-        vm.NearLowStockItems = allMedicines.Count(m => m.MedicineBatches.Sum(b => b.CurrentQuantity) > 0 && m.MedicineBatches.Sum(b => b.CurrentQuantity) <= m.MinStockLevel);
-
-        var allBatches = await _unitOfWork.Context.Set<MedicineBatch>().Where(b => b.CurrentQuantity > 0).ToListAsync();
         var inThreeMonths = today.AddMonths(3);
 
-        vm.ExpiringMedicines = allBatches.Count(b => b.ExpiryDate <= today);
-        vm.NearExpiringMedicines = allBatches.Count(b => b.ExpiryDate > today && b.ExpiryDate <= inThreeMonths);
+        // Out of stock: medicine has no active batch with ExpiryDate > today AND CurrentQuantity > 0
+        // Matches exactly the same criteria as GetFinishedMedicinesReportAsync
+        var allMedicines = await _unitOfWork.Context.Set<Medicine>().Include(m => m.MedicineBatches).ToListAsync();
+        vm.LowStockItems = allMedicines.Count(m =>
+            !m.MedicineBatches.Any(b => b.ExpiryDate > today && b.CurrentQuantity > 0));
+
+        // Near low stock: has some valid stock but below MinStockLevel (only counting unexpired batches)
+        vm.NearLowStockItems = allMedicines.Count(m =>
+        {
+            var validStock = m.MedicineBatches.Where(b => b.ExpiryDate > today).Sum(b => b.CurrentQuantity);
+            return validStock > 0 && validStock <= m.MinStockLevel;
+        });
+
+        // Expired: batches that are past expiry date and still have stock
+        var allBatches = await _unitOfWork.Context.Set<MedicineBatch>().ToListAsync();
+        vm.ExpiringMedicines = allBatches.Count(b => b.ExpiryDate < today && b.CurrentQuantity > 0);
+
+        // Near expiry: batches expiring within 3 months, still have stock, not yet expired
+        vm.NearExpiringMedicines = allBatches.Count(b => b.ExpiryDate >= today && b.ExpiryDate <= inThreeMonths && b.CurrentQuantity > 0);
 
         var last7Days = Enumerable.Range(0, 7).Select(i => today.AddDays(-i)).Reverse().ToList();
         var recentSales = await _unitOfWork.GetRepository<SalesInvoice>().Query()
-            .Where(s => s.CreatedAt >= today.AddDays(-6) && s.CreatedAt < tomorrow)
+            .Where(s => s.InvoiceDate >= today.AddDays(-6) && s.InvoiceDate < tomorrow)
             .ToListAsync();
 
         foreach (var date in last7Days)
         {
-            var daySales = recentSales.Where(s => s.CreatedAt.Date == date).Sum(s => s.TotalAmount);
+            var daySales = recentSales.Where(s => s.InvoiceDate.Date == date).Sum(s => s.TotalAmount);
             vm.SalesTrend.Add(new SalesTrendPoint { Date = date.ToString("MMM dd"), Amount = daySales });
         }
 

@@ -1,23 +1,52 @@
 @model IEnumerable<SalesReturnListItemViewModel>
 @using PharmacyManagement.BLL.ViewModels.SalesReturnViewModels
-@{ ViewData["Title"] = "Sales Returns"; ViewData["PageTitle"] = "Sales Returns"; }
+@{ 
+    ViewData["Title"] = "Sales Returns"; 
+    ViewData["PageTitle"] = "Sales Returns"; 
+    ViewData["PageIcon"] = "bi-arrow-return-right";
+}
 <partial name="_PageHeader" />
-<div class="content-card">
-<table class="table table-pharmacy table-striped">
-    <thead><tr><th>Return #</th><th>Invoice #</th><th>Customer</th><th>Date</th><th>Total</th><th>Reason</th><th></th></tr></thead>
-    <tbody>
-    @foreach (var r in Model)
-    {
-        <tr>
-            <td>@r.Id</td>
-            <td>@r.SalesInvoiceId</td>
-            <td>@r.CustomerName</td>
-            <td>@DisplayHelpers.Date(r.ReturnDate)</td>
-            <td>@DisplayHelpers.Egp(r.TotalAmount)</td>
-            <td>@r.Reason</td>
-            <td><a asp-action="Details" asp-route-id="@r.Id" class="btn btn-sm btn-outline-info">Details</a></td>
-        </tr>
-    }
-    </tbody>
-</table>
+
+<div class="content-card p-0 overflow-hidden shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-enterprise mb-0">
+            <thead>
+                <tr>
+                    <th>Return #</th>
+                    <th>Orig. Invoice #</th>
+                    <th>Customer Name</th>
+                    <th>Date & Time</th>
+                    <th>Reason</th>
+                    <th class="text-end">Total Refunded</th>
+                    <th class="text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            @if(!Model.Any()) {
+                <tr><td colspan="7" class="text-center p-5 text-muted"><i class="bi bi-inbox fs-2 d-block mb-2 opacity-50"></i>No sales returns found.</td></tr>
+            }
+            @foreach (var r in Model)
+            {
+                <tr>
+                    <td class="fw-bold text-dark">#@r.Id</td>
+                    <td><a asp-controller="SalesInvoice" asp-action="Details" asp-route-id="@r.SalesInvoiceId" class="text-decoration-none fw-bold">#@r.SalesInvoiceId</a></td>
+                    <td>
+                        <span class="badge bg-light text-dark border px-2 py-1"><i class="bi bi-person me-1"></i> @(string.IsNullOrWhiteSpace(r.CustomerName) ? "Walk-in" : r.CustomerName)</span>
+                    </td>
+                    <td>
+                        <span class="d-block text-dark fw-medium">@DisplayHelpers.Date(r.ReturnDate)</span>
+                        <small class="text-muted">@r.ReturnDate.ToString("t")</small>
+                    </td>
+                    <td class="text-muted">@r.Reason</td>
+                    <td class="text-end fw-bold text-danger">@DisplayHelpers.Egp(r.TotalAmount)</td>
+                    <td class="text-center">
+                        <a asp-action="Details" asp-route-id="@r.Id" class="btn btn-sm btn-light border shadow-sm text-primary" title="View Details">
+                            <i class="bi bi-eye"></i> Details
+                        </a>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
 </div>

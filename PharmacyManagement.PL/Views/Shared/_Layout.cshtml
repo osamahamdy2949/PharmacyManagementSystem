@@ -15,208 +15,466 @@
     <script>
         (() => {
             const theme = localStorage.getItem('pms-theme') || 'light';
-            const lang = localStorage.getItem('pms-lang') || 'en';
             document.documentElement.dataset.theme = theme;
-            document.documentElement.lang = lang;
-            document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
         })();
     </script>
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-</head>
-<body class="bg-light">
-    <div class="app-shell d-flex min-vh-100">
-        <!-- Left Sidebar -->
-        <aside class="sidebar bg-white border-end d-flex flex-column flex-shrink-0" id="sidebar" style="width: 260px; transition: all 0.3s ease;">
-            <div class="p-4 border-bottom d-flex align-items-center justify-content-between">
-                <a class="text-decoration-none d-flex align-items-center gap-2" asp-controller="Home" asp-action="Index">
-                    <img src="~/images/pharmacy-icon.svg" alt="Logo" width="32" height="32" />
-                    <span class="fs-5 fw-bold text-primary">Pharmacy MS</span>
-                </a>
-                <button class="btn btn-sm d-lg-none" type="button" id="closeSidebar"><i class="bi bi-x-lg"></i></button>
-            </div>
-            
-            <div class="flex-grow-1 p-3 sidebar-nav">
-                <ul class="nav nav-pills flex-column gap-1">
-                    <li class="nav-item">
-                        <a class="nav-link text-dark fw-medium" asp-controller="Home" asp-action="Index"><i class="bi bi-grid-1x2-fill me-3 text-primary opacity-75"></i><span data-i18n="nav.dashboard">Dashboard</span></a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-dark fw-medium" asp-controller="Medicine" asp-action="Index"><i class="bi bi-capsule me-3 text-warning opacity-75"></i><span data-i18n="nav.medicines">Medicines</span></a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-dark fw-medium" asp-controller="SalesInvoice" asp-action="Pos"><i class="bi bi-cart-plus-fill me-3 text-success opacity-75"></i><span data-i18n="nav.newSale">New Sale (POS)</span></a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-dark fw-medium" asp-controller="SalesInvoice" asp-action="Index"><i class="bi bi-receipt me-3 text-secondary opacity-75"></i><span data-i18n="nav.salesHistory">Sales History</span></a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-dark fw-medium" asp-controller="Customer" asp-action="Index"><i class="bi bi-people-fill me-3 text-info opacity-75"></i><span data-i18n="nav.customers">Customers</span></a>
-                    </li>
+    <style>
+        /* ── Sidebar Overhaul ── */
+        .sidebar {
+            background: #FFFFFF !important;
+            border-right: 1px solid #E2E8F0 !important;
+            display: flex;
+            flex-direction: column;
+        }
 
+        /* Dark mode sidebar */
+        [data-theme="dark"] .sidebar {
+            background: #080E20 !important;
+            border-right: 1px solid rgba(255,255,255,0.06) !important;
+        }
+
+        .sidebar .brand-area {
+            padding: 1.25rem 1.25rem 1rem;
+            border-bottom: 1px solid #E2E8F0;
+        }
+        [data-theme="dark"] .sidebar .brand-area {
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .sidebar-logo-wrap {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+        }
+        .sidebar-logo-img {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            object-fit: cover;
+            box-shadow: 0 0 0 2px rgba(99,102,241,0.25);
+        }
+        .sidebar-logo-name {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #0F172A;
+            letter-spacing: -0.01em;
+        }
+        [data-theme="dark"] .sidebar-logo-name { color: #F1F5F9; }
+        .sidebar-logo-tag {
+            font-size: 0.65rem;
+            color: #94A3B8;
+            font-weight: 500;
+        }
+
+        /* Nav links — light mode */
+        .sidebar .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            padding: 0.6rem 0.9rem;
+            border-radius: 8px;
+            margin: 1px 0.5rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #475569 !important;
+            transition: all 0.15s ease;
+            text-decoration: none;
+            position: relative;
+        }
+        .sidebar .nav-link:hover {
+            color: #0F172A !important;
+            background: #F1F5F9 !important;
+        }
+        .sidebar .nav-link.active {
+            color: #4F46E5 !important;
+            background: #EEF2FF !important;
+            font-weight: 600;
+        }
+        .sidebar .nav-link.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 20%;
+            height: 60%;
+            width: 3px;
+            background: #6366F1;
+            border-radius: 0 3px 3px 0;
+        }
+        .sidebar .nav-link i {
+            font-size: 0.95rem;
+            width: 20px;
+            text-align: center;
+            flex-shrink: 0;
+            opacity: 0.6;
+        }
+        .sidebar .nav-link:hover i,
+        .sidebar .nav-link.active i { opacity: 1; }
+
+        /* Nav links — dark mode override */
+        [data-theme="dark"] .sidebar .nav-link { color: #64748B !important; }
+        [data-theme="dark"] .sidebar .nav-link:hover {
+            color: #E2E8F0 !important;
+            background: rgba(255,255,255,0.05) !important;
+        }
+        [data-theme="dark"] .sidebar .nav-link.active {
+            color: #FFFFFF !important;
+            background: rgba(99,102,241,0.18) !important;
+        }
+
+        .sidebar-collapse-btn {
+            font-size: 0.62rem !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.1em !important;
+            text-transform: uppercase !important;
+            color: #94A3B8 !important;
+            padding: 1.25rem 1rem 0.4rem !important;
+            margin: 0 !important;
+            border-radius: 0 !important;
+            background: none !important;
+        }
+        .sidebar-collapse-btn:hover { color: #64748B !important; background: none !important; }
+        .sidebar-collapse-btn i { font-size: 0.6rem !important; transition: transform 0.2s; }
+        .sidebar-collapse-btn[aria-expanded="true"] i { transform: rotate(90deg); }
+
+        .sidebar .collapse .nav-link {
+            padding-left: 2.25rem;
+            font-size: 0.82rem;
+        }
+
+        .sidebar-footer {
+            padding: 1rem;
+            border-top: 1px solid #E2E8F0;
+        }
+        [data-theme="dark"] .sidebar-footer { border-top: 1px solid rgba(255,255,255,0.06); }
+        .sidebar-footer-text {
+            font-size: 0.7rem;
+            color: #CBD5E1;
+            text-align: center;
+        }
+
+        /* ── App Header ── */
+        .app-header {
+            background: var(--color-surface) !important;
+            border-bottom: 1px solid var(--color-border);
+            height: 60px;
+            padding: 0 1.5rem;
+        }
+        .header-search input {
+            background: var(--color-bg-subtle) !important;
+            border: 1px solid var(--color-border) !important;
+            border-radius: 8px !important;
+            font-size: 0.85rem;
+            padding-left: 2.5rem !important;
+        }
+        .header-search input:focus {
+            background: var(--color-surface) !important;
+            border-color: var(--color-primary) !important;
+            box-shadow: 0 0 0 3px rgba(79,70,229,0.1) !important;
+        }
+        .header-search .search-icon {
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--color-text-muted);
+            font-size: 0.85rem;
+        }
+
+        .header-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 9px;
+            background: linear-gradient(135deg, #4F46E5, #6366F1);
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .header-user-name { font-size: 0.85rem; font-weight: 600; color: var(--color-text-main); line-height: 1.2; }
+        .header-user-role { font-size: 0.72rem; color: var(--color-text-muted); }
+
+        .header-icon-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            border: 1px solid var(--color-border);
+            background: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--color-text-muted);
+            cursor: pointer;
+            transition: all 0.15s;
+            font-size: 0.9rem;
+        }
+        .header-icon-btn:hover {
+            background: var(--color-bg-subtle);
+            color: var(--color-text-main);
+        }
+        .dropdown-menu { border-radius: 12px; border: 1px solid var(--color-border); box-shadow: 0 10px 30px rgba(0,0,0,0.12); }
+    </style>
+</head>
+<body>
+    <div class="app-shell d-flex min-vh-100">
+
+        <!-- ── Sidebar ── -->
+        <aside class="sidebar flex-shrink-0" id="sidebar" style="width: 240px;">
+            <div class="brand-area">
+                <a class="sidebar-logo-wrap" asp-controller="Home" asp-action="Index">
+                    <img src="~/images/logo-3d.png" alt="Logo" class="sidebar-logo-img" />
+                    <div>
+                        <div class="sidebar-logo-name">Pharmacy MS</div>
+                        <div class="sidebar-logo-tag">Management System</div>
+                    </div>
+                </a>
+                <button class="btn btn-sm d-lg-none mt-2" style="color:#64748B;" type="button" id="closeSidebar">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <div class="flex-grow-1 py-2 overflow-auto sidebar-nav">
+                <ul class="nav flex-column gap-0">
                     <li class="nav-item">
-                        <a class="nav-link text-dark fw-medium" asp-controller="Payment" asp-action="Index"><i class="bi bi-cash-stack me-3 text-secondary opacity-75"></i><span data-i18n="nav.payments">Payments</span></a>
-                    </li>
-                    <li class="nav-item mt-3 mb-1">
-                        <a data-bs-toggle="collapse" href="#managementSection" role="button" aria-expanded="false" aria-controls="managementSection" class="sidebar-collapse-btn text-uppercase text-muted fw-bold letter-spacing-1 small ms-3 d-flex justify-content-between align-items-center text-decoration-none pe-3">
-                            <span data-i18n="nav.management">Management</span> <i class="bi bi-chevron-right"></i>
+                        <a class="nav-link" asp-controller="Home" asp-action="Index">
+                            <i class="bi bi-grid-1x2"></i> Dashboard
                         </a>
                     </li>
-                    <li class="nav-item w-100">
+                    <li class="nav-item">
+                        <a class="nav-link" asp-controller="Medicine" asp-action="Index">
+                            <i class="bi bi-capsule"></i> Medicines
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" asp-controller="SalesInvoice" asp-action="Pos">
+                            <i class="bi bi-cart-plus"></i> New Sale (POS)
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" asp-controller="SalesInvoice" asp-action="Index">
+                            <i class="bi bi-receipt"></i> Sales History
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" asp-controller="Customer" asp-action="Index">
+                            <i class="bi bi-people"></i> Customers
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" asp-controller="Payment" asp-action="Index">
+                            <i class="bi bi-cash-stack"></i> Payments
+                        </a>
+                    </li>
+
+                    <!-- Management -->
+                    <li class="nav-item">
+                        <a data-bs-toggle="collapse" href="#managementSection" role="button" aria-expanded="false" aria-controls="managementSection"
+                           class="nav-link sidebar-collapse-btn d-flex justify-content-between align-items-center text-decoration-none">
+                            <span>Management</span> <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <ul class="nav flex-column collapse" id="managementSection">
                             <li class="nav-item">
-                                <a class="nav-link text-dark fw-medium ps-4" asp-controller="Shift" asp-action="Current"><i class="bi bi-clock-history me-3 text-primary opacity-75"></i><span data-i18n="nav.currentShift">Current Shift</span></a>
+                                <a class="nav-link" asp-controller="Shift" asp-action="Current">
+                                    <i class="bi bi-clock-history"></i> Current Shift
+                                </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-dark fw-medium ps-4" asp-controller="Shift" asp-action="History"><i class="bi bi-journal-text me-3 text-secondary opacity-75"></i><span data-i18n="nav.shiftHistory">Shift History</span></a>
+                                <a class="nav-link" asp-controller="Shift" asp-action="History">
+                                    <i class="bi bi-journal-text"></i> Shift History
+                                </a>
                             </li>
                         </ul>
                     </li>
+
                     @if (isAdminOrPharmacist)
                     {
-                        <li class="nav-item mt-3 mb-1">
-                            <a data-bs-toggle="collapse" href="#inventorySection" role="button" aria-expanded="false" aria-controls="inventorySection" class="sidebar-collapse-btn text-uppercase text-muted fw-bold letter-spacing-1 small ms-3 d-flex justify-content-between align-items-center text-decoration-none pe-3">
-                                <span data-i18n="nav.inventory">Inventory</span> <i class="bi bi-chevron-right"></i>
+                        <!-- Inventory -->
+                        <li class="nav-item">
+                            <a data-bs-toggle="collapse" href="#inventorySection" role="button" aria-expanded="false" aria-controls="inventorySection"
+                               class="nav-link sidebar-collapse-btn d-flex justify-content-between align-items-center text-decoration-none">
+                                <span>Inventory</span> <i class="bi bi-chevron-right"></i>
                             </a>
                         </li>
-                        <li class="nav-item w-100">
+                        <li class="nav-item">
                             <ul class="nav flex-column collapse" id="inventorySection">
                                 <li class="nav-item">
-                                    <a class="nav-link text-dark fw-medium ps-4" asp-controller="Category" asp-action="Index"><i class="bi bi-tags-fill me-3 text-secondary opacity-75"></i><span data-i18n="nav.categories">Categories</span></a>
+                                    <a class="nav-link" asp-controller="Category" asp-action="Index">
+                                        <i class="bi bi-tags"></i> Categories
+                                    </a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link text-dark fw-medium ps-4" asp-controller="Supplier" asp-action="Index"><i class="bi bi-truck me-3 text-secondary opacity-75"></i><span data-i18n="nav.suppliers">Suppliers</span></a>
+                                    <a class="nav-link" asp-controller="Supplier" asp-action="Index">
+                                        <i class="bi bi-truck"></i> Suppliers
+                                    </a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link text-dark fw-medium ps-4" asp-controller="Inventory" asp-action="Index"><i class="bi bi-box-seam-fill me-3 text-secondary opacity-75"></i><span data-i18n="nav.stock">Stock</span></a>
+                                    <a class="nav-link" asp-controller="Inventory" asp-action="Index">
+                                        <i class="bi bi-box-seam"></i> Stock
+                                    </a>
                                 </li>
                             </ul>
                         </li>
 
-                        <li class="nav-item mt-3 mb-1">
-                            <a data-bs-toggle="collapse" href="#purchasesSection" role="button" aria-expanded="false" aria-controls="purchasesSection" class="sidebar-collapse-btn text-uppercase text-muted fw-bold letter-spacing-1 small ms-3 d-flex justify-content-between align-items-center text-decoration-none pe-3">
-                                <span data-i18n="nav.purchases">Purchases</span> <i class="bi bi-chevron-right"></i>
+                        <!-- Purchases -->
+                        <li class="nav-item">
+                            <a data-bs-toggle="collapse" href="#purchasesSection" role="button" aria-expanded="false" aria-controls="purchasesSection"
+                               class="nav-link sidebar-collapse-btn d-flex justify-content-between align-items-center text-decoration-none">
+                                <span>Purchases</span> <i class="bi bi-chevron-right"></i>
                             </a>
                         </li>
-                        <li class="nav-item w-100">
+                        <li class="nav-item">
                             <ul class="nav flex-column collapse" id="purchasesSection">
                                 <li class="nav-item">
-                                    <a class="nav-link text-dark fw-medium ps-4" asp-controller="PurchaseInvoice" asp-action="Index"><i class="bi bi-bag-plus-fill me-3 text-secondary opacity-75"></i><span data-i18n="nav.invoices">Invoices</span></a>
+                                    <a class="nav-link" asp-controller="PurchaseInvoice" asp-action="Index">
+                                        <i class="bi bi-bag-plus"></i> Invoices
+                                    </a>
                                 </li>
                             </ul>
                         </li>
 
-                        <li class="nav-item mt-3 mb-1">
-                            <a data-bs-toggle="collapse" href="#returnsSection" role="button" aria-expanded="false" aria-controls="returnsSection" class="sidebar-collapse-btn text-uppercase text-muted fw-bold letter-spacing-1 small ms-3 d-flex justify-content-between align-items-center text-decoration-none pe-3">
-                                <span data-i18n="nav.returns">Returns</span> <i class="bi bi-chevron-right"></i>
+                        <!-- Returns -->
+                        <li class="nav-item">
+                            <a data-bs-toggle="collapse" href="#returnsSection" role="button" aria-expanded="false" aria-controls="returnsSection"
+                               class="nav-link sidebar-collapse-btn d-flex justify-content-between align-items-center text-decoration-none">
+                                <span>Returns</span> <i class="bi bi-chevron-right"></i>
                             </a>
                         </li>
-                        <li class="nav-item w-100">
+                        <li class="nav-item">
                             <ul class="nav flex-column collapse" id="returnsSection">
                                 <li class="nav-item">
-                                    <a class="nav-link text-dark fw-medium ps-4" asp-controller="PurchaseReturn" asp-action="Index"><i class="bi bi-arrow-return-left me-3 text-secondary opacity-75"></i><span data-i18n="nav.purchaseReturns">Purchase Returns</span></a>
+                                    <a class="nav-link" asp-controller="PurchaseReturn" asp-action="Index">
+                                        <i class="bi bi-arrow-return-left"></i> Purchase Returns
+                                    </a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link text-dark fw-medium ps-4" asp-controller="SalesReturn" asp-action="Index"><i class="bi bi-arrow-return-right me-3 text-secondary opacity-75"></i><span data-i18n="nav.salesReturns">Sales Returns</span></a>
+                                    <a class="nav-link" asp-controller="SalesReturn" asp-action="Index">
+                                        <i class="bi bi-arrow-return-right"></i> Sales Returns
+                                    </a>
                                 </li>
                             </ul>
                         </li>
 
-                        <li class="nav-item mt-3 mb-1">
-                            <a data-bs-toggle="collapse" href="#reportsSection" role="button" aria-expanded="false" aria-controls="reportsSection" class="sidebar-collapse-btn text-uppercase text-muted fw-bold letter-spacing-1 small ms-3 d-flex justify-content-between align-items-center text-decoration-none pe-3">
-                                <span data-i18n="nav.reports">Reports</span> <i class="bi bi-chevron-right"></i>
+                        <!-- Reports -->
+                        <li class="nav-item">
+                            <a data-bs-toggle="collapse" href="#reportsSection" role="button" aria-expanded="false" aria-controls="reportsSection"
+                               class="nav-link sidebar-collapse-btn d-flex justify-content-between align-items-center text-decoration-none">
+                                <span>Reports</span> <i class="bi bi-chevron-right"></i>
                             </a>
                         </li>
-                        <li class="nav-item w-100">
+                        <li class="nav-item">
                             <ul class="nav flex-column collapse" id="reportsSection">
                                 <li class="nav-item">
-                                    <a class="nav-link text-dark fw-medium ps-4" asp-controller="Reports" asp-action="ProfitReport"><i class="bi bi-graph-up me-3 text-success opacity-75"></i><span data-i18n="nav.profit">Profit</span></a>
+                                    <a class="nav-link" asp-controller="Reports" asp-action="ProfitReport">
+                                        <i class="bi bi-graph-up"></i> Profit
+                                    </a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link text-dark fw-medium ps-4" asp-controller="Reports" asp-action="TopSellingMedicinesReport"><i class="bi bi-star-fill me-3 text-warning opacity-75"></i><span data-i18n="nav.topSelling">Top Selling</span></a>
+                                    <a class="nav-link" asp-controller="Reports" asp-action="TopSellingMedicinesReport">
+                                        <i class="bi bi-star"></i> Top Selling
+                                    </a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link text-dark fw-medium ps-4" asp-controller="Reports" asp-action="FinishedMedicinesReport"><i class="bi bi-exclamation-triangle-fill me-3 text-danger opacity-75"></i><span data-i18n="nav.outOfStock">Out of Stock</span></a>
+                                    <a class="nav-link" asp-controller="Reports" asp-action="FinishedMedicinesReport">
+                                        <i class="bi bi-exclamation-triangle"></i> Out of Stock
+                                    </a>
                                 </li>
                             </ul>
                         </li>
                     }
-                    
+
                     @if (isAdmin)
                     {
-                        <li class="nav-item mt-3 mb-1">
-                            <a data-bs-toggle="collapse" href="#adminSection" role="button" aria-expanded="false" aria-controls="adminSection" class="sidebar-collapse-btn text-uppercase text-muted fw-bold letter-spacing-1 small ms-3 d-flex justify-content-between align-items-center text-decoration-none pe-3">
-                                <span data-i18n="nav.admin">Admin</span> <i class="bi bi-chevron-right"></i>
+                        <!-- Admin -->
+                        <li class="nav-item">
+                            <a data-bs-toggle="collapse" href="#adminSection" role="button" aria-expanded="false" aria-controls="adminSection"
+                               class="nav-link sidebar-collapse-btn d-flex justify-content-between align-items-center text-decoration-none">
+                                <span>Admin</span> <i class="bi bi-chevron-right"></i>
                             </a>
                         </li>
-                        <li class="nav-item w-100">
+                        <li class="nav-item">
                             <ul class="nav flex-column collapse" id="adminSection">
                                 <li class="nav-item">
-                                    <a class="nav-link text-dark fw-medium ps-4" asp-controller="Users" asp-action="Index"><i class="bi bi-person-gear me-3 text-secondary opacity-75"></i><span data-i18n="nav.users">Users</span></a>
+                                    <a class="nav-link" asp-controller="Users" asp-action="Index">
+                                        <i class="bi bi-person-gear"></i> Users
+                                    </a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link text-dark fw-medium ps-4" asp-controller="AuditLog" asp-action="Index"><i class="bi bi-shield-lock me-3 text-secondary opacity-75"></i><span data-i18n="nav.auditLogs">Audit Logs</span></a>
+                                    <a class="nav-link" asp-controller="AuditLog" asp-action="Index">
+                                        <i class="bi bi-shield-lock"></i> Audit Logs
+                                    </a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link text-dark fw-medium ps-4" asp-controller="LoginTracking" asp-action="Index"><i class="bi bi-person-lines-fill me-3 text-secondary opacity-75"></i><span data-i18n="nav.loginHistory">Login History</span></a>
+                                    <a class="nav-link" asp-controller="LoginTracking" asp-action="Index">
+                                        <i class="bi bi-person-lines-fill"></i> Login History
+                                    </a>
                                 </li>
                             </ul>
                         </li>
                     }
                 </ul>
             </div>
-            <div class="p-3 border-top mt-auto">
-                <div class="text-center text-muted small">&copy; @DateTime.Now.Year <span data-i18n="brand.short">Pharmacy MS</span></div>
+
+            <div class="sidebar-footer">
+                <div class="sidebar-footer-text">&copy; @DateTime.Now.Year Pharmacy MS</div>
             </div>
         </aside>
 
-        <!-- Main Content Area -->
-        <div class="flex-grow-1 d-flex flex-column" style="min-width: 0; height: 100vh;">
-            
-            <!-- Top Navbar -->
-            <header class="bg-white border-bottom shadow-sm px-4 py-3 d-flex align-items-center justify-content-between position-sticky top-0 z-3">
-                <div class="d-flex align-items-center gap-3 w-50">
-                    <button class="btn btn-light d-lg-none" type="button" id="toggleSidebar"><i class="bi bi-list fs-5"></i></button>
-                    <form class="search-form w-100 position-relative" asp-controller="Search" asp-action="Index" method="get">
-                        <i class="bi bi-search position-absolute text-muted" style="top: 50%; transform: translateY(-50%); left: 15px;"></i>
-                        <input type="search" name="q" class="form-control bg-light border-0 rounded-pill ps-5" data-i18n-placeholder="search.placeholder" placeholder="Search medicines, suppliers..." value="@Context.Request.Query["q"]" />
-                    </form>
+        <!-- ── Main Workspace ── -->
+        <div class="main-workspace">
+
+            <!-- Header -->
+            <header class="app-header d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-3" style="flex: 1; max-width: 480px;">
+                    <button class="header-icon-btn d-lg-none" type="button" id="toggleSidebar" aria-label="Menu">
+                        <i class="bi bi-list fs-5"></i>
+                    </button>
+                    <div class="header-search position-relative w-100">
+                        <i class="bi bi-search search-icon"></i>
+                        <form asp-controller="Search" asp-action="Index" method="get">
+                            <input type="search" name="q" class="form-control" placeholder="Search medicines, suppliers..." value="@Context.Request.Query["q"]" />
+                        </form>
+                    </div>
                 </div>
-                
+
                 @if (User.Identity?.IsAuthenticated == true)
                 {
                     <div class="d-flex align-items-center gap-2">
-                        <div class="theme-language-controls">
-                            <button type="button" class="btn btn-light shell-icon-btn" id="themeToggle" title="Toggle dark mode" aria-label="Toggle dark mode">
-                                <i class="bi bi-moon-stars"></i>
-                            </button>
-                            <button type="button" class="btn btn-light" id="languageToggle" title="Switch language" aria-label="Switch language">AR</button>
+                        <button type="button" class="header-icon-btn" id="themeToggle" title="Toggle theme" aria-label="Toggle theme">
+                            <i class="bi bi-moon-stars"></i>
+                        </button>
+                        <div class="dropdown">
+                            <a class="text-decoration-none d-flex align-items-center gap-2 p-1" href="#" data-bs-toggle="dropdown" aria-expanded="false">
+                                <div class="text-end d-none d-md-block me-1">
+                                    <div class="header-user-name">@(User.Identity.Name?.Split('@')[0] ?? "User")</div>
+                                    <div class="header-user-role">Pharmacy Staff</div>
+                                </div>
+                                <div class="header-avatar">
+                                    @(User.Identity.Name?.Substring(0, 1).ToUpper() ?? "U")
+                                </div>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2 py-1">
+                                <li>
+                                    <form asp-controller="Account" asp-action="Logout" method="post" class="px-2 py-1">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-sm btn-outline-danger w-100 fw-semibold">
+                                            <i class="bi bi-box-arrow-right me-1"></i> Sign Out
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
                         </div>
-                    <div class="dropdown">
-                        <a class="text-decoration-none d-flex align-items-center gap-2" href="#" data-bs-toggle="dropdown">
-                            <div class="text-end d-none d-md-block">
-                                <div class="fw-bold text-dark lh-1">@User.Identity.Name</div>
-                                <small class="text-muted" data-i18n="user.staff">Pharmacy Staff</small>
-                            </div>
-                            <div class="rounded-circle bg-primary-subtle text-primary d-flex align-items-center justify-content-center fw-bold fs-5 shadow-sm border border-primary-subtle" style="width: 40px; height: 40px;">
-                                @(User.Identity.Name?.Substring(0, 1).ToUpper() ?? "U")
-                            </div>
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-2">
-                            <li>
-                                <form asp-controller="Account" asp-action="Logout" method="post" class="px-3 py-2">
-                                    @Html.AntiForgeryToken()
-                                    <button type="submit" class="btn btn-sm btn-outline-danger w-100 fw-bold"><i class="bi bi-box-arrow-right me-2"></i><span data-i18n="action.logout">Logout</span></button>
-                                </form>
-                            </li>
-                        </ul>
-                    </div>
                     </div>
                 }
             </header>
 
-            <!-- Main Scrollable Area -->
-            <main class="flex-grow-1 p-4 overflow-auto">
-                <div class="container-fluid max-w-1200">
+            <!-- Main Content -->
+            <main class="flex-grow-1">
+                <div class="main-container">
                     @if (TempData["Error"] != null)
                     {
                         <div class="alert alert-danger alert-dismissible fade show mb-4 border-0 shadow-sm" role="alert">
@@ -239,7 +497,7 @@
                             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                         </div>
                     }
-                    
+
                     @RenderBody()
                 </div>
             </main>
@@ -256,34 +514,56 @@
         document.getElementById('closeSidebar')?.addEventListener('click', () => {
             document.getElementById('sidebar').classList.remove('show-mobile');
         });
-        
-        // Highlight active link and expand its parent dropdown if needed
-        document.addEventListener("DOMContentLoaded", function() {
-            const currentPath = window.location.pathname.toLowerCase().replace(/\/$/, '') || '/';
-            const navLinks = Array.from(document.querySelectorAll('.sidebar .nav-link'));
-            const normalizePath = href => {
-                const path = new URL(href, window.location.origin).pathname.toLowerCase().replace(/\/$/, '');
+
+        // Highlight active nav link — sections stay collapsed by default, user controls them manually
+        document.addEventListener("DOMContentLoaded", function () {
+            // 1. Restore collapse state from sessionStorage (user's manual choices)
+            document.querySelectorAll('.sidebar .collapse').forEach(function(collapseEl) {
+                var key = 'sidebar-' + collapseEl.id;
+                var isOpen = sessionStorage.getItem(key) === 'true';
+                if (isOpen) {
+                    collapseEl.classList.add('show');
+                    var btn = document.querySelector('[aria-controls="' + collapseEl.id + '"]');
+                    if (btn) btn.setAttribute('aria-expanded', 'true');
+                }
+            });
+
+            // 2. Save state when user clicks a collapse toggle
+            document.querySelectorAll('.sidebar-collapse-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var targetId = btn.getAttribute('href')?.replace('#', '') ||
+                                   btn.getAttribute('data-bs-target')?.replace('#', '');
+                    if (!targetId) return;
+                    var collapseEl = document.getElementById(targetId);
+                    if (!collapseEl) return;
+                    // State will flip after Bootstrap animates; listen once on the collapse events
+                    collapseEl.addEventListener('shown.bs.collapse', function() {
+                        sessionStorage.setItem('sidebar-' + targetId, 'true');
+                    }, { once: true });
+                    collapseEl.addEventListener('hidden.bs.collapse', function() {
+                        sessionStorage.setItem('sidebar-' + targetId, 'false');
+                    }, { once: true });
+                });
+            });
+
+            // 3. Highlight active link (no auto-expand)
+            var currentPath = window.location.pathname.toLowerCase().replace(/\/$/, '') || '/';
+            var navLinks = Array.from(document.querySelectorAll('.sidebar .nav-link:not(.sidebar-collapse-btn)'));
+            var normalizePath = function(href) {
+                var path = new URL(href, window.location.origin).pathname.toLowerCase().replace(/\/$/, '');
                 return path || '/';
             };
-
-            const bestMatch = navLinks
-                .map(link => ({ link, path: normalizePath(link.getAttribute('href') || '/') }))
-                .filter(item =>
-                    item.path === '/'
+            var bestMatch = navLinks
+                .map(function(link) { return { link: link, path: normalizePath(link.getAttribute('href') || '/') }; })
+                .filter(function(item) {
+                    return item.path === '/'
                         ? currentPath === '/' || currentPath === '/home' || currentPath === '/home/index'
-                        : currentPath === item.path || currentPath.startsWith(`${item.path}/`))
-                .sort((a, b) => b.path.length - a.path.length)[0];
+                        : currentPath === item.path || currentPath.startsWith(item.path + '/');
+                })
+                .sort(function(a, b) { return b.path.length - a.path.length; })[0];
 
-            if (!bestMatch) return;
-
-            bestMatch.link.classList.add('active');
-            bestMatch.link.classList.remove('text-dark');
-
-            const collapseParent = bestMatch.link.closest('.collapse');
-            if (collapseParent) {
-                collapseParent.classList.add('show');
-                const btn = document.querySelector(`[aria-controls="${collapseParent.id}"]`);
-                if (btn) btn.setAttribute('aria-expanded', 'true');
+            if (bestMatch) {
+                bestMatch.link.classList.add('active');
             }
         });
     </script>

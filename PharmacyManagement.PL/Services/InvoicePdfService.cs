@@ -41,29 +41,72 @@ public class InvoicePdfService
         {
             doc.Page(page =>
             {
-                page.Margin(40);
-                page.Header().Text("Finished Medicines Report").FontSize(18).Bold();
-                page.Content().PaddingTop(10).Table(table =>
+                page.Size(PageSizes.A4);
+                page.Margin(36);
+                page.DefaultTextStyle(t => t.FontFamily("Arial").FontSize(9));
+
+                // Header
+                page.Header().Column(col =>
+                {
+                    col.Item().Row(row =>
+                    {
+                        row.RelativeItem().Column(inner =>
+                        {
+                            inner.Item().Text("PHARMACY MANAGEMENT SYSTEM").FontSize(9).FontColor("#6366F1").Bold().LetterSpacing(0.05f);
+                            inner.Item().Text("Finished / Out of Stock Medicines").FontSize(18).Bold().FontColor("#0F172A");
+                            inner.Item().Text($"Generated: {DateTime.Now:dd MMM yyyy, HH:mm}").FontSize(8).FontColor("#64748B");
+                        });
+                    });
+                    col.Item().PaddingTop(8).PaddingBottom(14).LineHorizontal(2).LineColor("#6366F1");
+                });
+
+                // Content Table
+                page.Content().PaddingTop(4).Table(table =>
                 {
                     table.ColumnsDefinition(c =>
                     {
-                        c.ConstantColumn(60); c.RelativeColumn(2); c.RelativeColumn(); c.RelativeColumn();
-                        c.RelativeColumn(); c.ConstantColumn(70);
+                        c.ConstantColumn(55);
+                        c.RelativeColumn(2.5f);
+                        c.RelativeColumn();
+                        c.RelativeColumn();
+                        c.RelativeColumn();
+                        c.ConstantColumn(65);
                     });
+
+                    // Table header
                     table.Header(h =>
                     {
-                        foreach (var t in new[] { "Serial", "Name", "Form", "Purchase Unit", "Price/Unit", "Expiry" })
-                            h.Cell().Background(Colors.Grey.Lighten2).Padding(4).Text(t).Bold();
+                        var headerBg = "#4F46E5";
+                        foreach (var t in new[] { "Serial", "Trade Name", "Form", "Purchase Unit", "Price / Unit", "Expiry" })
+                            h.Cell().Background(headerBg).PaddingVertical(7).PaddingHorizontal(5)
+                              .Text(t).FontColor(Colors.White).Bold().FontSize(8.5f);
                     });
+
+                    // Rows
+                    var rowIndex = 0;
                     foreach (var m in items)
                     {
-                        table.Cell().Padding(3).Text(m.SerialNumber);
-                        table.Cell().Padding(3).Text(m.TradeName);
-                        table.Cell().Padding(3).Text(m.MedicineForm);
-                        table.Cell().Padding(3).Text($"{m.PurchaseUnit} ({m.UnitInfo})");
-                        table.Cell().Padding(3).Text(CurrencyHelper.FormatEgp(m.PurchasePricePerPurchaseUnit));
-                        table.Cell().Padding(3).Text(DateDisplayHelper.FormatDate(m.ExpiryDate));
+                        var bg = rowIndex++ % 2 == 0 ? "#FFFFFF" : "#F8FAFC";
+                        table.Cell().Background(bg).BorderBottom(0.5f).BorderColor("#E2E8F0").PaddingVertical(5).PaddingHorizontal(5).Text(m.SerialNumber).FontSize(8);
+                        table.Cell().Background(bg).BorderBottom(0.5f).BorderColor("#E2E8F0").PaddingVertical(5).PaddingHorizontal(5).Text(m.TradeName).Bold().FontSize(8);
+                        table.Cell().Background(bg).BorderBottom(0.5f).BorderColor("#E2E8F0").PaddingVertical(5).PaddingHorizontal(5).Text(m.MedicineForm).FontSize(8);
+                        table.Cell().Background(bg).BorderBottom(0.5f).BorderColor("#E2E8F0").PaddingVertical(5).PaddingHorizontal(5).Text($"{m.PurchaseUnit} ({m.UnitInfo})").FontSize(8);
+                        table.Cell().Background(bg).BorderBottom(0.5f).BorderColor("#E2E8F0").PaddingVertical(5).PaddingHorizontal(5).Text(CurrencyHelper.FormatEgp(m.PurchasePricePerPurchaseUnit)).FontSize(8);
+                        table.Cell().Background(bg).BorderBottom(0.5f).BorderColor("#E2E8F0").PaddingVertical(5).PaddingHorizontal(5).Text(DateDisplayHelper.FormatDate(m.ExpiryDate)).FontSize(8);
                     }
+                });
+
+                // Footer
+                page.Footer().PaddingTop(8).Row(row =>
+                {
+                    row.RelativeItem().Text($"Total items: {items.Count}").FontSize(8).FontColor("#64748B");
+                    row.RelativeItem().AlignRight().Text(t =>
+                    {
+                        t.Span("Page ").FontSize(8).FontColor("#64748B");
+                        t.CurrentPageNumber().FontSize(8).FontColor("#64748B");
+                        t.Span(" of ").FontSize(8).FontColor("#64748B");
+                        t.TotalPages().FontSize(8).FontColor("#64748B");
+                    });
                 });
             });
         }).GeneratePdf();
@@ -77,36 +120,86 @@ public class InvoicePdfService
         {
             doc.Page(page =>
             {
-                page.Margin(40);
+                page.Size(PageSizes.A4);
+                page.Margin(36);
+                page.DefaultTextStyle(t => t.FontFamily("Arial").FontSize(9));
+
+                // Header
                 page.Header().Column(col =>
                 {
-                    col.Item().Text("Pharmacy Management System").FontSize(14).Bold();
-                    col.Item().Text(title).FontSize(18).FontColor(Colors.Teal.Darken2);
-                    col.Item().Text($"{(isPurchase ? "Supplier" : "Customer")}: {partyName}");
-                    col.Item().Text($"Date: {DateDisplayHelper.FormatDate(date)}");
+                    col.Item().Row(row =>
+                    {
+                        row.RelativeItem().Column(inner =>
+                        {
+                            inner.Item().Text("PHARMACY MANAGEMENT SYSTEM").FontSize(8).FontColor("#6366F1").Bold().LetterSpacing(0.05f);
+                            inner.Item().Text(title).FontSize(20).Bold().FontColor("#0F172A");
+                            inner.Item().PaddingTop(4).Row(r2 =>
+                            {
+                                r2.RelativeItem().Text($"{(isPurchase ? "Supplier" : "Customer")}: {partyName}").FontSize(9).FontColor("#374151");
+                                r2.RelativeItem().AlignRight().Text($"Date: {DateDisplayHelper.FormatDate(date)}").FontSize(9).FontColor("#374151");
+                            });
+                        });
+                    });
+                    col.Item().PaddingTop(10).PaddingBottom(14).LineHorizontal(2).LineColor("#6366F1");
                 });
-                page.Content().PaddingTop(15).Table(table =>
+
+                // Items Table
+                page.Content().PaddingTop(4).Table(table =>
                 {
                     table.ColumnsDefinition(c =>
                     {
-                        c.RelativeColumn(2); c.ConstantColumn(50); c.ConstantColumn(70);
-                        c.ConstantColumn(80); c.ConstantColumn(80);
+                        c.RelativeColumn(2.5f);
+                        c.ConstantColumn(45);
+                        c.ConstantColumn(65);
+                        c.ConstantColumn(75);
+                        c.ConstantColumn(80);
                     });
+
+                    // Table header row
+                    var headerBg = isPurchase ? "#4F46E5" : "#059669";
                     table.Header(h =>
                     {
-                        foreach (var t in new[] { "Medicine", "Qty", "Unit", "Price", "Subtotal" })
-                            h.Cell().Background(Colors.Teal.Medium).Padding(5).Text(t).FontColor(Colors.White);
+                        foreach (var t in new[] { "Medicine", "Qty", "Unit", "Unit Price", "Subtotal" })
+                            h.Cell().Background(headerBg).PaddingVertical(7).PaddingHorizontal(5)
+                              .Text(t).FontColor(Colors.White).Bold().FontSize(8.5f);
                     });
+
+                    // Rows with alternating background
+                    var rowIndex = 0;
                     foreach (var item in items)
                     {
-                        table.Cell().Padding(4).Text($"{item.MedicineName} ({item.SerialNumber})");
-                        table.Cell().Padding(4).Text(item.Quantity.ToString());
-                        table.Cell().Padding(4).Text(item.UnitLabel ?? "");
-                        table.Cell().Padding(4).Text(CurrencyHelper.FormatEgp(item.UnitPrice));
-                        table.Cell().Padding(4).Text(CurrencyHelper.FormatEgp(item.Subtotal));
+                        var bg = rowIndex++ % 2 == 0 ? "#FFFFFF" : "#F8FAFC";
+                        table.Cell().Background(bg).BorderBottom(0.5f).BorderColor("#E2E8F0").PaddingVertical(5).PaddingHorizontal(5)
+                            .Text($"{item.MedicineName} ({item.SerialNumber})").Bold().FontSize(8);
+                        table.Cell().Background(bg).BorderBottom(0.5f).BorderColor("#E2E8F0").PaddingVertical(5).PaddingHorizontal(5)
+                            .Text(item.Quantity.ToString()).FontSize(8);
+                        table.Cell().Background(bg).BorderBottom(0.5f).BorderColor("#E2E8F0").PaddingVertical(5).PaddingHorizontal(5)
+                            .Text(item.UnitLabel ?? "").FontSize(8);
+                        table.Cell().Background(bg).BorderBottom(0.5f).BorderColor("#E2E8F0").PaddingVertical(5).PaddingHorizontal(5)
+                            .Text(CurrencyHelper.FormatEgp(item.UnitPrice)).FontSize(8);
+                        table.Cell().Background(bg).BorderBottom(0.5f).BorderColor("#E2E8F0").PaddingVertical(5).PaddingHorizontal(5)
+                            .Text(CurrencyHelper.FormatEgp(item.Subtotal)).FontSize(8);
                     }
+
+                    // Total row
+                    table.Cell().ColumnSpan(4).Background("#F1F5F9").PaddingVertical(6).PaddingHorizontal(5)
+                        .AlignRight().Text("TOTAL").Bold().FontSize(9).FontColor("#0F172A");
+                    table.Cell().Background("#EEF2FF").PaddingVertical(6).PaddingHorizontal(5)
+                        .Text(CurrencyHelper.FormatEgp(total)).Bold().FontSize(9).FontColor("#4F46E5");
                 });
-                page.Footer().AlignRight().Text($"Total: {CurrencyHelper.FormatEgp(total)}").FontSize(14).Bold();
+
+                // Footer
+                page.Footer().PaddingTop(8).Row(row =>
+                {
+                    row.RelativeItem().Text("Thank you for your business.").FontSize(8).FontColor("#94A3B8").Italic();
+                    row.RelativeItem().AlignRight().Text(t =>
+                    {
+                        t.Span("Page ").FontSize(8).FontColor("#94A3B8");
+                        t.CurrentPageNumber().FontSize(8).FontColor("#94A3B8");
+                        t.Span(" of ").FontSize(8).FontColor("#94A3B8");
+                        t.TotalPages().FontSize(8).FontColor("#94A3B8");
+                    });
+                });
             });
         }).GeneratePdf();
     }

@@ -2,62 +2,84 @@
 @using PharmacyManagement.DAL.Common
 @{
     ViewData["Title"] = "Medicines";
-    ViewData["PageTitle"] = "Medicines";
+    ViewData["PageTitle"] = "Medicines Catalog";
+    ViewData["PageIcon"] = "bi-capsule";
     var canManage = User.IsInRole(RoleNames.Administrator) || User.IsInRole(RoleNames.Pharmacist);
     if (canManage)
     {
         ViewData["AddUrl"] = Url.Action("Create");
-        ViewData["AddText"] = "Add Medicine";
+        ViewData["AddText"] = "New Medicine";
     }
     var search = Context.Request.Query["search"].ToString();
 }
 <partial name="_PageHeader" />
 
-<div class="content-card mb-3">
-    <form asp-action="Index" method="get" class="row g-2 align-items-end">
-        <div class="col-md-8">
-            <label class="form-label fw-semibold"><i class="bi bi-search"></i> Search by trade or scientific name</label>
-            <input type="search" name="search" value="@search" class="form-control form-control-lg"
-                   placeholder="Trade name or scientific name..." />
-        </div>
-        <div class="col-md-4">
-            <button type="submit" class="btn btn-pharmacy w-100">Search</button>
+<div class="content-card mb-4 p-0 shadow-sm border-0 bg-transparent">
+    <form asp-action="Index" method="get">
+        <div class="d-flex gap-2">
+            <div class="position-relative flex-grow-1">
+                <i class="bi bi-search position-absolute text-muted" style="top: 50%; transform: translateY(-50%); left: 1rem;"></i>
+                <input type="search" name="search" value="@search" class="form-control form-control-lg border-primary shadow-sm"
+                       placeholder="Search by trade name, scientific name, or SKU..." style="padding-left: 2.5rem;" />
+            </div>
+            <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm">Search</button>
+            @if (!string.IsNullOrEmpty(search))
+            {
+                <a asp-action="Index" class="btn btn-light px-4 shadow-sm border">Clear</a>
+            }
         </div>
     </form>
 </div>
 
-<div class="content-card">
-    <table class="table table-pharmacy table-hover">
-        <thead>
-            <tr>
-                <th>Trade Name</th><th>Scientific Name</th><th>Form</th><th>Category</th>
-                <th>Purchase Price</th><th>Selling Price</th><th></th>
-            </tr>
-        </thead>
-        <tbody>
-        @foreach (var m in Model)
-        {
-            <tr>
-                <td><strong>@m.TradeName</strong></td>
-                <td>@m.ScientificName</td>
-                <td>@m.MedicineForm</td>
-                <td>@m.CategoryName</td>
-                <td>@DisplayHelpers.Egp(m.PurchasePrice)</td>
-                <td>@DisplayHelpers.Egp(m.SellingPrice)</td>
-                <td class="text-nowrap">
-                    <a asp-action="Details" asp-route-id="@m.Id" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a>
-                    @if (canManage)
-                    {
-                        <a asp-action="Edit" asp-route-id="@m.Id" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
-                        <a asp-action="Delete" asp-route-id="@m.Id" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
-                    }
-                </td>
-            </tr>
-        }
-        </tbody>
-    </table>
-    @if (!Model.Any())
-    {
-        <p class="text-muted text-center py-4 mb-0">No medicines found.</p>
-    }
+<div class="content-card p-0 overflow-hidden shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-enterprise mb-0">
+            <thead>
+                <tr>
+                    <th>Medicine Details</th>
+                    <th>Form & Category</th>
+                    <th class="text-end">Purchase Price</th>
+                    <th class="text-end">Selling Price</th>
+                    <th class="text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            @if (!Model.Any())
+            {
+                <tr><td colspan="5" class="text-center p-5 text-muted"><i class="bi bi-search fs-2 d-block mb-2 opacity-50"></i>No medicines found matching your criteria.</td></tr>
+            }
+            @foreach (var m in Model)
+            {
+                <tr class="bg-white">
+                    <td>
+                        <span class="d-block fw-bold text-dark">@m.TradeName</span>
+                        <small class="text-muted">@m.ScientificName</small>
+                    </td>
+                    <td>
+                        <span class="d-block text-dark">@m.MedicineForm</span>
+                        <span class="badge bg-light text-muted border mt-1">@m.CategoryName</span>
+                    </td>
+                    <td class="text-end fw-medium text-dark">@DisplayHelpers.Egp(m.PurchasePrice)</td>
+                    <td class="text-end fw-bold text-primary">@DisplayHelpers.Egp(m.SellingPrice)</td>
+                    <td class="text-center">
+                        <div class="btn-group shadow-sm">
+                            <a asp-action="Details" asp-route-id="@m.Id" class="btn btn-sm btn-light border text-primary" title="View Details">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            @if (canManage)
+                            {
+                                <a asp-action="Edit" asp-route-id="@m.Id" class="btn btn-sm btn-light border text-secondary" title="Edit Medicine">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a asp-action="Delete" asp-route-id="@m.Id" class="btn btn-sm btn-light border text-danger" title="Delete Medicine">
+                                    <i class="bi bi-trash3-fill"></i>
+                                </a>
+                            }
+                        </div>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
 </div>

@@ -3,43 +3,75 @@
     ViewData["Title"] = "Inventory";
     var filter = (InventoryFilter)ViewBag.Filter;
 }
-<div class="page-header d-flex justify-content-between align-items-center">
-    <h2><i class="bi bi-box-seam"></i> Inventory</h2>
-    <div class="btn-group">
-        <a asp-action="Index" asp-route-filter="All" class="btn btn-sm @(filter == InventoryFilter.All ? "btn-pharmacy" : "btn-outline-secondary")">All</a>
-        <a asp-action="Index" asp-route-filter="LowStock" class="btn btn-sm @(filter == InventoryFilter.LowStock ? "btn-pharmacy" : "btn-outline-secondary")">Low Stock</a>
-        <a asp-action="Index" asp-route-filter="NearExpiry" class="btn btn-sm @(filter == InventoryFilter.NearExpiry ? "btn-pharmacy" : "btn-outline-secondary")">Near Expiry</a>
-        <a asp-action="Index" asp-route-filter="Expired" class="btn btn-sm @(filter == InventoryFilter.Expired ? "btn-pharmacy" : "btn-outline-secondary")">Expired</a>
-        <a asp-action="Index" asp-route-filter="OutOfStock" class="btn btn-sm @(filter == InventoryFilter.OutOfStock ? "btn-pharmacy" : "btn-outline-secondary")">Out Of Stock</a>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="h3 fw-bold mb-1 text-dark"><i class="bi bi-box-seam me-2 text-primary"></i> Inventory Management</h2>
+        <p class="text-muted mb-0">Monitor stock levels, batches, and expirations.</p>
     </div>
 </div>
-<div class="content-card">
-<table class="table table-pharmacy table-striped table-sm">
-    <thead>
-        <tr>
-            <th>SKU</th><th>Medicine</th><th>Form</th><th>Category</th><th>Dose</th><th>Batch</th>
-            <th>Stock (Purchase)</th><th>Stock (Sale)</th><th>Expiry</th>
-            <th>Purchase Price</th><th>Selling Price</th><th>Status</th>
-        </tr>
-    </thead>
-    <tbody>
-    @foreach (var item in Model)
-    {
-        <tr>
-            <td><code>@item.Sku</code></td>
-            <td>@item.MedicineName</td>
-            <td>@item.MedicineForm</td>
-            <td>@item.CategoryName</td>
-            <td>@item.Dose</td>
-            <td>@item.BatchNumber</td>
-            <td>@item.StockByPurchaseUnit</td>
-            <td>@item.StockBySellingUnit</td>
-            <td>@DisplayHelpers.Date(item.ExpiryDate)</td>
-            <td>@DisplayHelpers.Egp(item.PurchasePrice)</td>
-            <td>@DisplayHelpers.Egp(item.SellingPrice)</td>
-            <td><span class="badge" style="background:@item.StatusColor">@item.Status</span></td>
-        </tr>
-    }
-    </tbody>
-</table>
+
+<div class="content-card p-3 mb-4 shadow-sm border-0 d-flex flex-wrap gap-2 bg-white">
+    <a asp-action="Index" asp-route-filter="All" class="btn fw-bold px-4 rounded-pill @(filter == InventoryFilter.All ? "btn-primary shadow-sm" : "btn-light border text-muted")">
+        All Stock
+    </a>
+    <a asp-action="Index" asp-route-filter="LowStock" class="btn fw-bold px-4 rounded-pill @(filter == InventoryFilter.LowStock ? "btn-warning shadow-sm" : "btn-light border text-muted")">
+        <i class="bi bi-exclamation-triangle me-1"></i> Low Stock
+    </a>
+    <a asp-action="Index" asp-route-filter="NearExpiry" class="btn fw-bold px-4 rounded-pill @(filter == InventoryFilter.NearExpiry ? "btn-info text-white shadow-sm" : "btn-light border text-muted")">
+        <i class="bi bi-calendar-event me-1"></i> Near Expiry
+    </a>
+    <a asp-action="Index" asp-route-filter="Expired" class="btn fw-bold px-4 rounded-pill @(filter == InventoryFilter.Expired ? "btn-danger shadow-sm" : "btn-light border text-muted")">
+        <i class="bi bi-x-octagon me-1"></i> Expired
+    </a>
+    <a asp-action="Index" asp-route-filter="OutOfStock" class="btn fw-bold px-4 rounded-pill @(filter == InventoryFilter.OutOfStock ? "btn-secondary shadow-sm" : "btn-light border text-muted")">
+        <i class="bi bi-dash-circle me-1"></i> Out of Stock
+    </a>
+</div>
+
+<div class="content-card p-0 overflow-hidden shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-enterprise mb-0">
+            <thead>
+                <tr>
+                    <th>Medicine Details</th>
+                    <th>Batch Info</th>
+                    <th class="text-center">Stock (Purchase)</th>
+                    <th class="text-center">Stock (Sale)</th>
+                    <th>Expiry Date</th>
+                    <th class="text-end">Prices</th>
+                    <th class="text-center">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+            @if(!Model.Any()) {
+                <tr><td colspan="7" class="text-center p-5 text-muted"><i class="bi bi-inbox fs-2 d-block mb-2 opacity-50"></i>No inventory records found for this filter.</td></tr>
+            }
+            @foreach (var item in Model)
+            {
+                <tr class="bg-white">
+                    <td>
+                        <span class="d-block fw-bold text-dark">@item.MedicineName</span>
+                        <small class="text-muted"><code class="bg-light px-1 rounded text-dark border">@item.Sku</code> · @item.MedicineForm</small>
+                    </td>
+                    <td>
+                        <span class="d-block text-dark fw-medium">#@item.BatchNumber</span>
+                        <span class="badge bg-light text-muted border mt-1">@item.Dose</span>
+                    </td>
+                    <td class="text-center fw-bold text-dark">@item.StockByPurchaseUnit</td>
+                    <td class="text-center fw-bold text-primary">@item.StockBySellingUnit</td>
+                    <td>
+                        <span class="d-block text-dark fw-medium">@DisplayHelpers.Date(item.ExpiryDate)</span>
+                    </td>
+                    <td class="text-end">
+                        <small class="d-block text-muted">Buy: @DisplayHelpers.Egp(item.PurchasePrice)</small>
+                        <span class="fw-bold text-success">Sell: @DisplayHelpers.Egp(item.SellingPrice)</span>
+                    </td>
+                    <td class="text-center">
+                        <span class="badge px-2 py-1 text-white shadow-sm border border-white" style="background:@item.StatusColor">@item.Status</span>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
 </div>
