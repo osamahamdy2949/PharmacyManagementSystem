@@ -117,14 +117,18 @@ public class ShiftService : IShiftService
 
     private async Task<ShiftSummaryViewModel> BuildShiftSummaryAsync(Shift activeShift)
     {
-        var user = await _unitOfWork.Context.Set<ApplicationUser>().FirstOrDefaultAsync(u => u.Id == activeShift.UserId);
+        var userName = await _unitOfWork.Context.Set<ApplicationUser>()
+            .AsNoTracking()
+            .Where(u => u.Id == activeShift.UserId)
+            .Select(u => u.FullName)
+            .FirstOrDefaultAsync();
         var totals = await CalculateShiftTotalsAsync(activeShift.UserId, activeShift.StartTime, DateTime.UtcNow);
 
         return new ShiftSummaryViewModel
         {
             ShiftId = activeShift.Id,
             StartTime = activeShift.StartTime,
-            UserName = user?.FullName ?? "Unknown",
+            UserName = userName ?? "Unknown",
             CashSales = totals.CashSales,
             TotalPaymentsReceived = totals.TotalPaymentsReceived,
             TotalPurchases = totals.TotalPurchases
@@ -133,7 +137,9 @@ public class ShiftService : IShiftService
 
     public async Task<IReadOnlyList<ShiftViewModel>> GetShiftHistoryAsync(DateTime? from, DateTime? to)
     {
-        var query = _unitOfWork.GetRepository<Shift>().Query().AsQueryable();
+        var query = _unitOfWork.GetRepository<Shift>().Query()
+            .AsNoTracking()
+            .AsQueryable();
 
         if (from.HasValue) query = query.Where(s => s.StartTime >= from.Value.Date);
         if (to.HasValue)
@@ -148,12 +154,17 @@ public class ShiftService : IShiftService
 
     public async Task<ShiftViewModel?> GetByIdAsync(int id)
     {
-        var shift = await _unitOfWork.GetRepository<Shift>().GetByIdAsync(id);
+        var shift = await _unitOfWork.GetRepository<Shift>().Query()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(s => s.Id == id);
         if (shift == null) return null;
 
         var vm = _mapper.Map<ShiftViewModel>(shift);
-        var user = await _unitOfWork.Context.Set<ApplicationUser>().FirstOrDefaultAsync(u => u.Id == shift.UserId);
-        vm.UserName = user?.FullName ?? "Unknown";
+        vm.UserName = await _unitOfWork.Context.Set<ApplicationUser>()
+            .AsNoTracking()
+            .Where(u => u.Id == shift.UserId)
+            .Select(u => u.FullName)
+            .FirstOrDefaultAsync() ?? "Unknown";
 
         return vm;
     }
@@ -167,22 +178,31 @@ public class ShiftService : IShiftService
     private async Task<(decimal CashSales, decimal CreditSales, decimal TotalPurchases, decimal TotalPaymentsReceived)> CalculateShiftTotalsAsync(string userId, DateTime startTime, DateTime endTime)
     {
 
-        var sales = await _unitOfWork.GetRepository<SalesInvoice>().Query()
-            .Where(s => s.CreatedByUserId == userId && s.CreatedAt >= startTime && s.CreatedAt <= endTime)
-            .ToListAsync();
+        var salesQuery = _unitOfWork.GetRepository<SalesInvoice>().Query()
+            .AsNoTracking()
+            .Where(s => s.CreatedByUserId == userId && s.CreatedAt >= startTime && s.CreatedAt <= endTime);
 
-        var cashSales = sales.Where(s => s.SaleType == SaleType.Cash).Sum(s => s.TotalAmount);
-        var creditSales = sales.Where(s => s.SaleType == SaleType.Credit).Sum(s => s.TotalAmount);
+        var cashSales = await salesQuery
+            .Where(s => s.SaleType == SaleType.Cash)
+            .SumAsync(s => s.TotalAmount);
+
+        var creditSales = await salesQuery
+            .Where(s => s.SaleType == SaleType.Credit)
+            .SumAsync(s => s.TotalAmount);
         
-        var initialCreditPayments = sales.Where(s => s.SaleType == SaleType.Credit).Sum(s => s.PaidAmount);
+        var initialCreditPayments = await salesQuery
+            .Where(s => s.SaleType == SaleType.Credit)
+            .SumAsync(s => s.PaidAmount);
         
         var payments = await _unitOfWork.GetRepository<Payment>().Query()
+            .AsNoTracking()
             .Where(p => p.RecordedByUserId == userId && p.CreatedAt >= startTime && p.CreatedAt <= endTime)
             .SumAsync(p => p.AmountPaid);
 
         var totalPaymentsReceived = payments + initialCreditPayments;
 
         var purchases = await _unitOfWork.GetRepository<PurchaseInvoice>().Query()
+            .AsNoTracking()
             .Where(p => p.CreatedByUserId == userId && p.CreatedAt >= startTime && p.CreatedAt <= endTime)
             .SumAsync(p => p.TotalAmount);
 
@@ -197,6 +217,7 @@ public class ShiftService : IShiftService
         if (userIds.Any())
         {
             var users = await _unitOfWork.Context.Set<ApplicationUser>()
+                .AsNoTracking()
                 .Where(u => userIds.Contains(u.Id))
                 .ToDictionaryAsync(u => u.Id, u => u.FullName);
 

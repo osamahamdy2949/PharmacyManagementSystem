@@ -25,13 +25,17 @@ public class CustomerService : ICustomerService
 
     public async Task<IReadOnlyList<CustomerViewModel>> GetAllAsync()
     {
-        var items = await _unitOfWork.GetRepository<Customer>().GetAllAsync();
+        var items = await _unitOfWork.GetRepository<Customer>().Query()
+            .AsNoTracking()
+            .ToListAsync();
         return _mapper.Map<IReadOnlyList<CustomerViewModel>>(items);
     }
 
     public async Task<CustomerViewModel?> GetByIdAsync(int id)
     {
-        var item = await _unitOfWork.GetRepository<Customer>().GetByIdAsync(id);
+        var item = await _unitOfWork.GetRepository<Customer>().Query()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == id);
         return item == null ? null : _mapper.Map<CustomerViewModel>(item);
     }
 
@@ -86,6 +90,7 @@ public class CustomerService : ICustomerService
         var normalizedName = trimmedName.ToUpper();
         var normalizedPhone = phone?.Trim();
         var existing = await _unitOfWork.GetRepository<Customer>().Query()
+            .AsNoTracking()
             .FirstOrDefaultAsync(c =>
                 c.Name.ToUpper() == normalizedName &&
                 (string.IsNullOrWhiteSpace(normalizedPhone) || c.Phone == normalizedPhone));
@@ -107,32 +112,40 @@ public class CustomerService : ICustomerService
     public async Task<CustomerProfileViewModel?> GetCustomerProfileAsync(int id)
     {
         var item = await _unitOfWork.GetRepository<Customer>().Query()
-            .Include(c => c.SalesInvoices)
-            .FirstOrDefaultAsync(c => c.Id == id);
+            .AsNoTracking()
+            .Where(c => c.Id == id)
+            .Select(c => new
+            {
+                Customer = c,
+                TotalInvoices = c.SalesInvoices.Count
+            })
+            .FirstOrDefaultAsync();
 
         if (item == null)
             return null;
 
-        var vm = _mapper.Map<CustomerProfileViewModel>(item);
-        vm.TotalInvoices = item.SalesInvoices.Count;
+        var vm = _mapper.Map<CustomerProfileViewModel>(item.Customer);
+        vm.TotalInvoices = item.TotalInvoices;
         return vm;
     }
 
     public async Task<IReadOnlyList<CustomerDebtHistoryViewModel>> GetCustomerDebtHistoryAsync(int id)
     {
         var invoices = await _unitOfWork.GetRepository<SalesInvoice>().Query()
+            .AsNoTracking()
             .Where(s => s.CustomerId == id && s.SaleType == PharmacyManagement.DAL.Data.Entities.Enums.SaleType.Credit)
             .OrderByDescending(s => s.InvoiceDate)
+            .Select(s => new CustomerDebtHistoryViewModel
+            {
+                InvoiceId = s.Id,
+                InvoiceDate = s.InvoiceDate,
+                TotalAmount = s.TotalAmount,
+                PaidAmount = s.PaidAmount,
+                RemainingAmount = s.RemainingAmount,
+                PaymentStatus = s.PaymentStatus.ToString()
+            })
             .ToListAsync();
 
-        return invoices.Select(s => new CustomerDebtHistoryViewModel
-        {
-            InvoiceId = s.Id,
-            InvoiceDate = s.InvoiceDate,
-            TotalAmount = s.TotalAmount,
-            PaidAmount = s.PaidAmount,
-            RemainingAmount = s.RemainingAmount,
-            PaymentStatus = s.PaymentStatus.ToString()
-        }).ToList();
+        return invoices;
     }
 }

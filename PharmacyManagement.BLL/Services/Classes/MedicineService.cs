@@ -20,25 +20,24 @@ public class MedicineService : IMedicineService
     private readonly IMapper _mapper;
     private readonly IValidator<MedicineViewModel> _createValidator;
     private readonly IValidator<MedicineViewModel> _editValidator;
-    private readonly IStockService _stockService;
 
     public MedicineService(
         IUnitOfWork unitOfWork,
         IMapper mapper,
         IValidator<MedicineViewModel> createValidator,
-        MedicineEditViewModelValidator editValidator,
-        IStockService stockService)
+        MedicineEditViewModelValidator editValidator)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
         _createValidator = createValidator;
         _editValidator = editValidator;
-        _stockService = stockService;
     }
 
     public async Task<IReadOnlyList<MedicineViewModel>> GetAllAsync(string? search = null)
     {
-        IQueryable<Medicine> query = _unitOfWork.GetRepository<Medicine>().Query().Include(m => m.Category);
+        IQueryable<Medicine> query = _unitOfWork.GetRepository<Medicine>().Query()
+            .AsNoTracking()
+            .Include(m => m.Category);
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -64,6 +63,7 @@ public class MedicineService : IMedicineService
         var term = query.Trim().ToLower();
 
         var medicines = await _unitOfWork.GetRepository<Medicine>().Query()
+            .AsNoTracking()
             .Include(m => m.Category)
             .Where(m =>
                 m.SerialNumber.ToLower().Contains(term) ||
@@ -77,16 +77,19 @@ public class MedicineService : IMedicineService
         await PopulateStockInfoAsync(medicineVms);
 
         var categories = await _unitOfWork.GetRepository<Category>().Query()
+            .AsNoTracking()
             .Where(c => c.Name.ToLower().Contains(term))
             .Take(10)
             .ToListAsync();
 
         var suppliers = await _unitOfWork.GetRepository<Supplier>().Query()
+            .AsNoTracking()
             .Where(s => s.Name.ToLower().Contains(term) || (s.Email != null && s.Email.ToLower().Contains(term)))
             .Take(10)
             .ToListAsync();
 
         var customers = await _unitOfWork.GetRepository<Customer>().Query()
+            .AsNoTracking()
             .Where(c => c.Name.ToLower().Contains(term) || (c.Phone != null && c.Phone.Contains(term)))
             .Take(10)
             .ToListAsync();
@@ -104,6 +107,7 @@ public class MedicineService : IMedicineService
     public async Task<MedicineViewModel?> GetByIdAsync(int id)
     {
         var item = await _unitOfWork.GetRepository<Medicine>().Query()
+            .AsNoTracking()
             .Include(m => m.Category)
             .FirstOrDefaultAsync(m => m.Id == id);
         if (item == null) return null;
@@ -175,16 +179,39 @@ public class MedicineService : IMedicineService
         return ServiceResult.Ok();
     }
 
-    private async Task PopulateStockInfoAsync(IEnumerable<MedicineViewModel> vms)
+    private async Task PopulateStockInfoAsync(IEnumerable<MedicineViewModel> viewModels)
     {
+        var medicines = viewModels.ToList();
+        if (medicines.Count == 0)
+            return;
+
         var today = DateTime.Today;
         var nearExpiry = today.AddDays(ValidationConstants.NearExpiryDays);
+        var medicineIds = medicines.Select(m => m.Id).ToList();
 
-        foreach (var vm in vms)
+        var stockInfo = await _unitOfWork.GetRepository<MedicineBatch>().Query()
+            .AsNoTracking()
+            .Where(b =>
+                medicineIds.Contains(b.MedicineId) &&
+                b.IsActive &&
+                b.ExpiryDate > today &&
+                b.CurrentQuantity > 0)
+            .GroupBy(b => b.MedicineId)
+            .Select(g => new
+            {
+                MedicineId = g.Key,
+                QuantityInStock = g.Sum(b => b.CurrentQuantity),
+                IsNearExpiry = g.Any(b => b.ExpiryDate <= nearExpiry)
+            })
+            .ToDictionaryAsync(x => x.MedicineId);
+
+        foreach (var vm in medicines)
         {
-            vm.QuantityInStock = await _stockService.GetAvailableStockAsync(vm.Id);
-            var batches = await _stockService.GetBatchesForSaleAsync(vm.Id);
-            vm.IsNearExpiry = batches.Any(b => b.ExpiryDate <= nearExpiry);
+            if (!stockInfo.TryGetValue(vm.Id, out var item))
+                continue;
+
+            vm.QuantityInStock = item.QuantityInStock;
+            vm.IsNearExpiry = item.IsNearExpiry;
         }
     }
 }

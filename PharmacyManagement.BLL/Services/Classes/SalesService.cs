@@ -40,6 +40,7 @@ public class SalesService : ISalesService
     public async Task<IReadOnlyList<SalesInvoiceViewModel>> GetAllAsync()
     {
         var items = await _unitOfWork.GetRepository<SalesInvoice>().Query()
+            .AsNoTracking()
             .Include(s => s.Customer)
             .Include(s => s.Items).ThenInclude(i => i.Medicine)
             .Include(s => s.Items).ThenInclude(i => i.MedicineBatch)
@@ -54,6 +55,7 @@ public class SalesService : ISalesService
     public async Task<SalesInvoiceViewModel?> GetByIdAsync(int id)
     {
         var item = await _unitOfWork.GetRepository<SalesInvoice>().Query()
+            .AsNoTracking()
             .Include(s => s.Customer)
             .Include(s => s.Items).ThenInclude(i => i.Medicine)
             .Include(s => s.Items).ThenInclude(i => i.MedicineBatch)
@@ -65,6 +67,7 @@ public class SalesService : ISalesService
     {
         var today = DateTime.Today;
         var batchQuery = _unitOfWork.GetRepository<MedicineBatch>().Query()
+            .AsNoTracking()
             .Include(b => b.Medicine)
             .Where(b => b.IsActive && b.ExpiryDate > today && b.CurrentQuantity > 0);
 
@@ -125,6 +128,7 @@ public class SalesService : ISalesService
     public async Task<ServiceResult<PosCheckoutResultViewModel>> CheckoutPosAsync(PosCheckoutViewModel model)
     {
         var activeShiftExists = await _unitOfWork.GetRepository<Shift>().Query()
+            .AsNoTracking()
             .AnyAsync(s => s.UserId == _currentUser.UserId && s.IsActive);
         if (!activeShiftExists)
             return ServiceResult<PosCheckoutResultViewModel>.Fail("You must start a shift before completing a sale.");
@@ -144,19 +148,21 @@ public class SalesService : ISalesService
 
             customerId = customerResult.Data;
         }
-        else if (!await _unitOfWork.GetRepository<Customer>().AnyAsync(c => c.Id == customerId))
+        else if (!await _unitOfWork.GetRepository<Customer>().Query().AsNoTracking().AnyAsync(c => c.Id == customerId))
         {
             return ServiceResult<PosCheckoutResultViewModel>.Fail("Customer does not exist.");
         }
 
         var cartLines = model.Items.Where(i => i.Quantity > 0).ToList();
+        var medicineIds = cartLines.Select(i => i.MedicineId).Distinct().ToList();
+        var medicinesById = await _unitOfWork.GetRepository<Medicine>().Query()
+            .AsNoTracking()
+            .Where(m => medicineIds.Contains(m.Id))
+            .ToDictionaryAsync(m => m.Id);
+
         foreach (var line in cartLines)
         {
-            var medicine = await _unitOfWork.GetRepository<Medicine>().Query()
-                .AsNoTracking()
-                .FirstOrDefaultAsync(m => m.Id == line.MedicineId);
-
-            if (medicine == null)
+            if (!medicinesById.TryGetValue(line.MedicineId, out var medicine))
                 return ServiceResult<PosCheckoutResultViewModel>.Fail($"Medicine id {line.MedicineId} not found.");
 
             var dose = line.Dose?.Trim() ?? string.Empty;
@@ -176,9 +182,7 @@ public class SalesService : ISalesService
 
             foreach (var line in cartLines)
             {
-                var medicine = await _unitOfWork.GetRepository<Medicine>().Query()
-                    .AsNoTracking()
-                    .FirstAsync(m => m.Id == line.MedicineId);
+                var medicine = medicinesById[line.MedicineId];
 
                 var deductions = line.BatchId.HasValue
                     ? await _stockService.DeductStockFromBatchAsync(line.BatchId.Value, line.Quantity)
@@ -274,6 +278,7 @@ public class SalesService : ISalesService
             return;
 
         var users = await _unitOfWork.Context.Set<ApplicationUser>()
+            .AsNoTracking()
             .Where(user => userIds.Contains(user.Id))
             .ToDictionaryAsync(user => user.Id, user => user.FullName);
 

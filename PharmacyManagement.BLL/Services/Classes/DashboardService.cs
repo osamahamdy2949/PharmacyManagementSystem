@@ -25,81 +25,84 @@ public class DashboardService : IDashboardService
         var thisMonthStart = new DateTime(today.Year, today.Month, 1);
         var nextMonthStart = thisMonthStart.AddMonths(1);
 
-        var todaySales = await _unitOfWork.GetRepository<SalesInvoice>().Query()
+        vm.TodaySales = await _unitOfWork.GetRepository<SalesInvoice>().Query()
+            .AsNoTracking()
             .Where(s => s.InvoiceDate >= today && s.InvoiceDate < tomorrow)
-            .ToListAsync();
-        vm.TodaySales = todaySales.Sum(s => s.TotalAmount);
+            .SumAsync(s => s.TotalAmount);
 
-        var todayPurchases = await _unitOfWork.GetRepository<PurchaseInvoice>().Query()
+        vm.TodayPurchases = await _unitOfWork.GetRepository<PurchaseInvoice>().Query()
+            .AsNoTracking()
             .Where(p => p.InvoiceDate >= today && p.InvoiceDate < tomorrow)
-            .ToListAsync();
-        vm.TodayPurchases = todayPurchases.Sum(p => p.TotalAmount);
+            .SumAsync(p => p.TotalAmount);
 
         vm.TodayProfit = vm.TodaySales - vm.TodayPurchases;
 
-        var monthSales = await _unitOfWork.GetRepository<SalesInvoice>().Query()
+        vm.MonthlySales = await _unitOfWork.GetRepository<SalesInvoice>().Query()
+            .AsNoTracking()
             .Where(s => s.InvoiceDate >= thisMonthStart && s.InvoiceDate < nextMonthStart)
-            .ToListAsync();
-        vm.MonthlySales = monthSales.Sum(s => s.TotalAmount);
+            .SumAsync(s => s.TotalAmount);
 
-        var monthPurchases = await _unitOfWork.GetRepository<PurchaseInvoice>().Query()
+        vm.MonthlyPurchases = await _unitOfWork.GetRepository<PurchaseInvoice>().Query()
+            .AsNoTracking()
             .Where(p => p.InvoiceDate >= thisMonthStart && p.InvoiceDate < nextMonthStart)
-            .ToListAsync();
-        vm.MonthlyPurchases = monthPurchases.Sum(p => p.TotalAmount);
+            .SumAsync(p => p.TotalAmount);
 
         vm.MonthlyProfit = vm.MonthlySales - vm.MonthlyPurchases;
 
-        vm.TotalCustomers = await _unitOfWork.GetRepository<Customer>().Query().CountAsync();
-        vm.OutstandingDebt = await _unitOfWork.GetRepository<Customer>().Query().SumAsync(c => c.RemainingBalance);
-        vm.TotalProducts = await _unitOfWork.GetRepository<Medicine>().Query().CountAsync();
+        vm.TotalCustomers = await _unitOfWork.GetRepository<Customer>().Query().AsNoTracking().CountAsync();
+        vm.OutstandingDebt = await _unitOfWork.GetRepository<Customer>().Query().AsNoTracking().SumAsync(c => c.RemainingBalance);
+        vm.TotalProducts = await _unitOfWork.GetRepository<Medicine>().Query().AsNoTracking().CountAsync();
 
         var inThreeMonths = today.AddMonths(3);
 
-        // Out of stock: medicine has no active batch with ExpiryDate > today AND CurrentQuantity > 0
-        // Matches exactly the same criteria as GetFinishedMedicinesReportAsync
-        var allMedicines = await _unitOfWork.Context.Set<Medicine>().Include(m => m.MedicineBatches).ToListAsync();
-        vm.LowStockItems = allMedicines.Count(m =>
-            !m.MedicineBatches.Any(b => b.ExpiryDate > today && b.CurrentQuantity > 0));
+        vm.LowStockItems = await _unitOfWork.GetRepository<Medicine>().Query()
+            .AsNoTracking()
+            .CountAsync(m => !m.MedicineBatches.Any(b => b.ExpiryDate > today && b.CurrentQuantity > 0));
 
-        // Near low stock: has some valid stock but below MinStockLevel (only counting unexpired batches)
-        vm.NearLowStockItems = allMedicines.Count(m =>
-        {
-            var validStock = m.MedicineBatches.Where(b => b.ExpiryDate > today).Sum(b => b.CurrentQuantity);
-            return validStock > 0 && validStock <= m.MinStockLevel;
-        });
+        vm.NearLowStockItems = await _unitOfWork.GetRepository<Medicine>().Query()
+            .AsNoTracking()
+            .CountAsync(m =>
+                m.MedicineBatches.Where(b => b.ExpiryDate > today).Sum(b => b.CurrentQuantity) > 0 &&
+                m.MedicineBatches.Where(b => b.ExpiryDate > today).Sum(b => b.CurrentQuantity) <= m.MinStockLevel);
 
-        // Expired: batches that are past expiry date and still have stock
-        var allBatches = await _unitOfWork.Context.Set<MedicineBatch>().ToListAsync();
-        vm.ExpiringMedicines = allBatches.Count(b => b.ExpiryDate < today && b.CurrentQuantity > 0);
+        vm.ExpiringMedicines = await _unitOfWork.GetRepository<MedicineBatch>().Query()
+            .AsNoTracking()
+            .CountAsync(b => b.ExpiryDate < today && b.CurrentQuantity > 0);
 
-        // Near expiry: batches expiring within 3 months, still have stock, not yet expired
-        vm.NearExpiringMedicines = allBatches.Count(b => b.ExpiryDate >= today && b.ExpiryDate <= inThreeMonths && b.CurrentQuantity > 0);
+        vm.NearExpiringMedicines = await _unitOfWork.GetRepository<MedicineBatch>().Query()
+            .AsNoTracking()
+            .CountAsync(b => b.ExpiryDate >= today && b.ExpiryDate <= inThreeMonths && b.CurrentQuantity > 0);
 
         var last7Days = Enumerable.Range(0, 7).Select(i => today.AddDays(-i)).Reverse().ToList();
         var recentSales = await _unitOfWork.GetRepository<SalesInvoice>().Query()
+            .AsNoTracking()
             .Where(s => s.InvoiceDate >= today.AddDays(-6) && s.InvoiceDate < tomorrow)
-            .ToListAsync();
+            .GroupBy(s => s.InvoiceDate.Date)
+            .Select(g => new { Date = g.Key, Amount = g.Sum(s => s.TotalAmount) })
+            .ToDictionaryAsync(g => g.Date, g => g.Amount);
 
         foreach (var date in last7Days)
         {
-            var daySales = recentSales.Where(s => s.InvoiceDate.Date == date).Sum(s => s.TotalAmount);
+            var daySales = recentSales.GetValueOrDefault(date);
             vm.SalesTrend.Add(new SalesTrendPoint { Date = date.ToString("MMM dd"), Amount = daySales });
         }
 
         var activities = new List<RecentActivityDto>();
 
         var latestSales = await _unitOfWork.GetRepository<SalesInvoice>().Query()
+            .AsNoTracking()
             .OrderByDescending(s => s.CreatedAt).Take(3)
             .Select(s => new RecentActivityDto { ActivityType = "Sale", Description = $"Sale Invoice #{s.Id}", Time = s.CreatedAt, Amount = s.TotalAmount, Icon = "bi-cart-check", Color = "text-success bg-success-subtle" })
             .ToListAsync();
 
         var latestPurchases = await _unitOfWork.GetRepository<PurchaseInvoice>().Query()
+            .AsNoTracking()
             .OrderByDescending(p => p.CreatedAt).Take(2)
             .Select(p => new RecentActivityDto { ActivityType = "Purchase", Description = $"Purchase Invoice #{p.Id}", Time = p.CreatedAt, Amount = p.TotalAmount, Icon = "bi-bag-plus", Color = "text-danger bg-danger-subtle" })
             .ToListAsync();
 
         var latestPayments = await _unitOfWork.GetRepository<Payment>().Query()
-            .Include(p => p.Customer)
+            .AsNoTracking()
             .OrderByDescending(p => p.CreatedAt).Take(2)
             .Select(p => new RecentActivityDto { ActivityType = "Payment", Description = $"Payment from {p.Customer.Name}", Time = p.CreatedAt, Amount = p.AmountPaid, Icon = "bi-cash-coin", Color = "text-info bg-info-subtle" })
             .ToListAsync();

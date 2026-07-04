@@ -36,6 +36,7 @@ public class PaymentService : IPaymentService
         if (validation != null) return validation;
 
         var activeShiftExists = await _unitOfWork.GetRepository<Shift>().Query()
+            .AsNoTracking()
             .AnyAsync(s => s.UserId == _currentUser.UserId && s.IsActive);
         if (!activeShiftExists)
             return ServiceResult.Fail("You must start a shift before recording payments.");
@@ -126,6 +127,7 @@ public class PaymentService : IPaymentService
     public async Task<IReadOnlyList<PaymentViewModel>> GetPaymentHistoryAsync(PaymentHistoryFilterViewModel filter)
     {
         var query = _unitOfWork.GetRepository<Payment>().Query()
+            .AsNoTracking()
             .Include(p => p.Customer)
             .AsQueryable();
 
@@ -148,6 +150,7 @@ public class PaymentService : IPaymentService
     public async Task<IReadOnlyList<PaymentViewModel>> GetPaymentsByCustomerAsync(int customerId)
     {
         var payments = await _unitOfWork.GetRepository<Payment>().Query()
+            .AsNoTracking()
             .Include(p => p.Customer)
             .Where(p => p.CustomerId == customerId)
             .OrderByDescending(p => p.PaymentDate)
@@ -159,6 +162,7 @@ public class PaymentService : IPaymentService
     public async Task<IReadOnlyList<PaymentViewModel>> GetPaymentsByInvoiceAsync(int invoiceId)
     {
         var payments = await _unitOfWork.GetRepository<Payment>().Query()
+            .AsNoTracking()
             .Include(p => p.Customer)
             .Where(p => p.SalesInvoiceId == invoiceId)
             .OrderByDescending(p => p.PaymentDate)
@@ -170,6 +174,7 @@ public class PaymentService : IPaymentService
     public async Task<PaymentViewModel?> GetByIdAsync(int id)
     {
         var payment = await _unitOfWork.GetRepository<Payment>().Query()
+            .AsNoTracking()
             .Include(p => p.Customer)
             .FirstOrDefaultAsync(p => p.Id == id);
 
@@ -179,8 +184,11 @@ public class PaymentService : IPaymentService
         
         if (payment.RecordedByUserId != null)
         {
-            var user = await _unitOfWork.Context.Set<ApplicationUser>().FirstOrDefaultAsync(u => u.Id == payment.RecordedByUserId);
-            vm.RecordedByUserName = user?.FullName ?? "System";
+            vm.RecordedByUserName = await _unitOfWork.Context.Set<ApplicationUser>()
+                .AsNoTracking()
+                .Where(u => u.Id == payment.RecordedByUserId)
+                .Select(u => u.FullName)
+                .FirstOrDefaultAsync() ?? "System";
         }
         
         return vm;
@@ -194,6 +202,7 @@ public class PaymentService : IPaymentService
         if (userIds.Any())
         {
             var users = await _unitOfWork.Context.Set<ApplicationUser>()
+                .AsNoTracking()
                 .Where(u => userIds.Contains(u.Id))
                 .ToDictionaryAsync(u => u.Id, u => u.FullName);
 

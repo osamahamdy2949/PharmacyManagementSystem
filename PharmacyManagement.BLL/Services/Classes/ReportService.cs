@@ -1,4 +1,3 @@
-using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using PharmacyManagement.BLL.Common;
 using PharmacyManagement.BLL.Services.Interfaces;
@@ -13,21 +12,15 @@ namespace PharmacyManagement.BLL.Services.Classes;
 public class ReportService : IReportService
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IMapper _mapper;
-    private readonly IStockService _stockService;
     private readonly ISalesReturnService _salesReturnService;
     private readonly INotificationService _notificationService;
 
     public ReportService(
         IUnitOfWork unitOfWork,
-        IMapper mapper,
-        IStockService stockService,
         ISalesReturnService salesReturnService,
         INotificationService notificationService)
     {
         _unitOfWork = unitOfWork;
-        _mapper = mapper;
-        _stockService = stockService;
         _salesReturnService = salesReturnService;
         _notificationService = notificationService;
     }
@@ -37,6 +30,7 @@ public class ReportService : IReportService
         var today = DateTime.Today;
         var nearExpiry = today.AddDays(ValidationConstants.NearExpiryDays);
         var batches = await _unitOfWork.GetRepository<MedicineBatch>().Query()
+            .AsNoTracking()
             .Include(b => b.Medicine).ThenInclude(m => m.Category)
             .Where(b => b.IsActive)
             .OrderBy(b => b.Medicine.TradeName)
@@ -81,27 +75,61 @@ public class ReportService : IReportService
 
     public async Task<IReadOnlyList<InventoryReportItemViewModel>> GetInventoryReportAsync()
     {
+        var today = DateTime.Today;
         var items = await _unitOfWork.GetRepository<Medicine>().Query()
-            .Include(m => m.Category)
             .OrderBy(m => m.TradeName)
+            .AsNoTracking()
+            .Select(m => new InventoryReportItemViewModel
+            {
+                Id = m.Id,
+                SerialNumber = m.SerialNumber,
+                TradeName = m.TradeName,
+                CategoryName = m.Category.Name,
+                QuantityInStock = m.MedicineBatches
+                    .Where(b => b.IsActive && b.ExpiryDate > today && b.CurrentQuantity > 0)
+                    .Sum(b => b.CurrentQuantity),
+                SellingPrice = m.SellingPrice,
+                PurchasePrice = m.PurchasePrice
+            })
             .ToListAsync();
-        var vms = _mapper.Map<IReadOnlyList<InventoryReportItemViewModel>>(items);
-        foreach (var vm in vms)
-            vm.QuantityInStock = await _stockService.GetAvailableStockAsync(vm.Id);
-        return vms;
+
+        return items;
     }
 
     public async Task<IReadOnlyList<MedicineViewModel>> GetLowStockReportAsync()
     {
         var today = DateTime.Today;
         var items = await _unitOfWork.GetRepository<Medicine>().Query()
-            .Include(m => m.Category)
+            .AsNoTracking()
             .Where(m => m.MedicineBatches.Sum(b => (b.ExpiryDate > today && b.CurrentQuantity > 0) ? b.CurrentQuantity : 0) < m.MinStockLevel)
+            .Select(m => new MedicineViewModel
+            {
+                Id = m.Id,
+                SerialNumber = m.SerialNumber,
+                TradeName = m.TradeName,
+                ScientificName = m.ScientificName,
+                Description = m.Description,
+                MedicineForm = m.MedicineForm,
+                PurchaseUnit = m.PurchaseUnit,
+                SaleUnit = m.SaleUnit,
+                UnitsPerPurchaseUnit = m.UnitsPerPurchaseUnit,
+                PurchasePrice = m.PurchasePrice,
+                SellingPrice = m.SellingPrice,
+                QuantityInStock = m.MedicineBatches
+                    .Where(b => b.IsActive && b.ExpiryDate > today && b.CurrentQuantity > 0)
+                    .Sum(b => b.CurrentQuantity),
+                Manufacturer = m.Manufacturer,
+                Barcode = m.Barcode,
+                StrengthValue = m.StrengthValue,
+                StrengthUnit = m.StrengthUnit,
+                MinStockLevel = m.MinStockLevel,
+                IsActive = m.IsActive,
+                CategoryId = m.CategoryId,
+                CategoryName = m.Category.Name
+            })
             .ToListAsync();
-        var vms = _mapper.Map<IReadOnlyList<MedicineViewModel>>(items);
-        foreach (var vm in vms)
-            vm.QuantityInStock = await _stockService.GetAvailableStockAsync(vm.Id);
-        return vms;
+
+        return items;
     }
 
     public async Task<IReadOnlyList<MedicineViewModel>> GetExpiryReportAsync()
@@ -109,35 +137,57 @@ public class ReportService : IReportService
         var today = DateTime.Today;
         var nearExpiry = today.AddDays(ValidationConstants.NearExpiryDays);
         var items = await _unitOfWork.GetRepository<Medicine>().Query()
-            .Include(m => m.Category)
+            .AsNoTracking()
             .Where(m => m.MedicineBatches.Any(b => b.ExpiryDate <= nearExpiry && b.ExpiryDate >= today && b.CurrentQuantity > 0))
+            .Select(m => new MedicineViewModel
+            {
+                Id = m.Id,
+                SerialNumber = m.SerialNumber,
+                TradeName = m.TradeName,
+                ScientificName = m.ScientificName,
+                Description = m.Description,
+                MedicineForm = m.MedicineForm,
+                PurchaseUnit = m.PurchaseUnit,
+                SaleUnit = m.SaleUnit,
+                UnitsPerPurchaseUnit = m.UnitsPerPurchaseUnit,
+                PurchasePrice = m.PurchasePrice,
+                SellingPrice = m.SellingPrice,
+                QuantityInStock = m.MedicineBatches
+                    .Where(b => b.IsActive && b.ExpiryDate > today && b.CurrentQuantity > 0)
+                    .Sum(b => b.CurrentQuantity),
+                Manufacturer = m.Manufacturer,
+                Barcode = m.Barcode,
+                StrengthValue = m.StrengthValue,
+                StrengthUnit = m.StrengthUnit,
+                MinStockLevel = m.MinStockLevel,
+                IsActive = m.IsActive,
+                CategoryId = m.CategoryId,
+                CategoryName = m.Category.Name,
+                IsNearExpiry = true
+            })
             .ToListAsync();
-        var vms = _mapper.Map<IReadOnlyList<MedicineViewModel>>(items);
-        foreach (var vm in vms)
-        {
-            vm.QuantityInStock = await _stockService.GetAvailableStockAsync(vm.Id);
-            vm.IsNearExpiry = true;
-        }
-        return vms;
+
+        return items;
     }
 
     public async Task<IReadOnlyList<ExpiredMedicineReportItemViewModel>> GetExpiredMedicinesReportAsync()
     {
         var today = DateTime.Today;
         var batches = await _unitOfWork.GetRepository<MedicineBatch>().Query()
-            .Include(b => b.Medicine)
+            .AsNoTracking()
             .Where(b => b.ExpiryDate < today && b.CurrentQuantity > 0)
             .OrderBy(b => b.ExpiryDate)
+            .Select(b => new ExpiredMedicineReportItemViewModel
+            {
+                MedicineName = b.Medicine.TradeName,
+                BatchNumber = b.BatchNumber,
+                ExpiryDate = b.ExpiryDate,
+                Quantity = b.CurrentQuantity,
+                LossValue = b.CurrentQuantity * b.PurchasePrice / Math.Max(1, b.Medicine.UnitsPerPurchaseUnit)
+            })
             .ToListAsync();
 
-        return batches.Select(b => new ExpiredMedicineReportItemViewModel
-        {
-            MedicineName = b.Medicine.TradeName,
-            BatchNumber = b.BatchNumber,
-            ExpiryDate = b.ExpiryDate,
-            Quantity = b.CurrentQuantity,
-            LossValue = b.CurrentQuantity * b.PurchasePrice / Math.Max(1, b.Medicine.UnitsPerPurchaseUnit)
-        }).ToList();
+        return batches;
     }
 
     public async Task<IReadOnlyList<SalesReportItemViewModel>> GetSalesReportAsync(
@@ -147,11 +197,20 @@ public class ReportService : IReportService
     {
         var (start, end) = GetDateRange(period, from, to);
         var items = await _unitOfWork.GetRepository<SalesInvoice>().Query()
-            .Include(s => s.Customer)
+            .AsNoTracking()
             .Where(s => s.InvoiceDate >= start && s.InvoiceDate < end)
             .OrderByDescending(s => s.InvoiceDate)
+            .Select(s => new SalesReportItemViewModel
+            {
+                InvoiceId = s.Id,
+                InvoiceDate = s.InvoiceDate,
+                CustomerName = s.Customer.Name,
+                SaleType = s.SaleType.ToString(),
+                TotalAmount = s.TotalAmount
+            })
             .ToListAsync();
-        return _mapper.Map<IReadOnlyList<SalesReportItemViewModel>>(items);
+
+        return items;
     }
 
     public async Task<IReadOnlyList<PurchaseReportItemViewModel>> GetPurchaseReportAsync(
@@ -161,18 +220,19 @@ public class ReportService : IReportService
     {
         var (start, end) = GetDateRange(period, from, to);
         var items = await _unitOfWork.GetRepository<PurchaseInvoice>().Query()
-            .Include(p => p.Supplier)
+            .AsNoTracking()
             .Where(p => p.InvoiceDate >= start && p.InvoiceDate < end)
             .OrderByDescending(p => p.InvoiceDate)
+            .Select(p => new PurchaseReportItemViewModel
+            {
+                InvoiceId = p.Id,
+                InvoiceDate = p.InvoiceDate,
+                SupplierName = p.Supplier.Name,
+                TotalAmount = p.TotalAmount
+            })
             .ToListAsync();
 
-        return items.Select(p => new PurchaseReportItemViewModel
-        {
-            InvoiceId = p.Id,
-            InvoiceDate = p.InvoiceDate,
-            SupplierName = p.Supplier.Name,
-            TotalAmount = p.TotalAmount
-        }).ToList();
+        return items;
     }
 
     public async Task<ProfitReportViewModel> GetProfitReportAsync(
@@ -183,10 +243,12 @@ public class ReportService : IReportService
         var (start, end) = GetDateRange(period, from, to);
         
         var sales = await _unitOfWork.GetRepository<SalesInvoice>().Query()
+            .AsNoTracking()
             .Where(s => s.InvoiceDate >= start && s.InvoiceDate < end)
             .SumAsync(s => s.TotalAmount);
             
         var purchases = await _unitOfWork.GetRepository<PurchaseInvoice>().Query()
+            .AsNoTracking()
             .Where(p => p.InvoiceDate >= start && p.InvoiceDate < end)
             .SumAsync(p => p.TotalAmount);
 
@@ -209,8 +271,7 @@ public class ReportService : IReportService
     {
         var (start, end) = GetDateRange(period, from, to);
         var items = await _unitOfWork.GetRepository<SalesInvoiceItem>().Query()
-            .Include(i => i.Medicine)
-            .Include(i => i.SalesInvoice)
+            .AsNoTracking()
             .Where(i => i.SalesInvoice.InvoiceDate >= start && i.SalesInvoice.InvoiceDate < end)
             .GroupBy(i => new { i.MedicineId, i.Medicine.TradeName })
             .Select(g => new TopSellingMedicineViewModel
@@ -232,8 +293,7 @@ public class ReportService : IReportService
     {
         var (start, end) = GetDateRange(period, from, to);
         var items = await _unitOfWork.GetRepository<SalesInvoiceItem>().Query()
-            .Include(i => i.Medicine).ThenInclude(m => m.Category)
-            .Include(i => i.SalesInvoice)
+            .AsNoTracking()
             .Where(i => i.SalesInvoice.InvoiceDate >= start && i.SalesInvoice.InvoiceDate < end)
             .GroupBy(i => i.Medicine.Category.Name)
             .Select(g => new SalesByCategoryViewModel
@@ -251,11 +311,26 @@ public class ReportService : IReportService
     {
         var today = DateTime.Today;
         var items = await _unitOfWork.GetRepository<Medicine>().Query()
-            .Include(m => m.Category)
+            .AsNoTracking()
             .Where(m => !m.MedicineBatches.Any(b => b.ExpiryDate > today && b.CurrentQuantity > 0))
             .OrderBy(m => m.TradeName)
+            .Select(m => new FinishedMedicineReportItemViewModel
+            {
+                Id = m.Id,
+                SerialNumber = m.SerialNumber,
+                TradeName = m.TradeName,
+                ScientificName = m.ScientificName,
+                MedicineForm = m.MedicineForm.ToString(),
+                CategoryName = m.Category.Name,
+                Manufacturer = m.Manufacturer,
+                PurchaseUnit = m.PurchaseUnit.ToString(),
+                SaleUnit = m.SaleUnit.ToString(),
+                UnitsPerPurchaseUnit = m.UnitsPerPurchaseUnit,
+                PurchasePricePerPurchaseUnit = m.PurchasePrice
+            })
             .ToListAsync();
-        return _mapper.Map<IReadOnlyList<FinishedMedicineReportItemViewModel>>(items);
+
+        return items;
     }
 
     public async Task<DashboardViewModel> GetDashboardAsync()

@@ -39,6 +39,7 @@ public class PurchaseService : IPurchaseService
     public async Task<IReadOnlyList<PurchaseInvoiceViewModel>> GetAllAsync()
     {
         var items = await _unitOfWork.GetRepository<PurchaseInvoice>().Query()
+            .AsNoTracking()
             .Include(p => p.Supplier)
             .Include(p => p.Items).ThenInclude(i => i.Medicine)
             .OrderByDescending(p => p.InvoiceDate)
@@ -49,6 +50,7 @@ public class PurchaseService : IPurchaseService
     public async Task<PurchaseInvoiceViewModel?> GetByIdAsync(int id)
     {
         var item = await _unitOfWork.GetRepository<PurchaseInvoice>().Query()
+            .AsNoTracking()
             .Include(p => p.Supplier)
             .Include(p => p.Items).ThenInclude(i => i.Medicine)
             .FirstOrDefaultAsync(p => p.Id == id);
@@ -74,6 +76,7 @@ public class PurchaseService : IPurchaseService
 
     public async Task<IReadOnlyList<string>> GetExistingBatchNumbersAsync() =>
         await _unitOfWork.GetRepository<MedicineBatch>().Query()
+            .AsNoTracking()
             .Select(b => b.BatchNumber)
             .Distinct()
             .OrderBy(b => b)
@@ -81,34 +84,31 @@ public class PurchaseService : IPurchaseService
 
     public async Task<IReadOnlyList<PendingBatchViewModel>> GetPendingBatchesAsync()
     {
-        var batches = await _unitOfWork.GetRepository<MedicineBatch>().Query()
-            .Include(b => b.Medicine)
-            .Where(b => !b.IsActive && b.CurrentQuantity > 0)
-            .OrderBy(b => b.Medicine.TradeName)
-            .ToListAsync();
+        var pendingBatches = _unitOfWork.GetRepository<MedicineBatch>().Query()
+            .AsNoTracking()
+            .Where(b => !b.IsActive && b.CurrentQuantity > 0);
 
-        var result = new List<PendingBatchViewModel>();
-        foreach (var b in batches)
-        {
-            var invoiceItem = await _unitOfWork.GetRepository<PurchaseInvoiceItem>().Query()
-                .Include(i => i.PurchaseInvoice).ThenInclude(p => p.Supplier)
-                .FirstOrDefaultAsync(i => i.MedicineBatchId == b.Id);
+        var invoiceItems = _unitOfWork.GetRepository<PurchaseInvoiceItem>().Query()
+            .AsNoTracking();
 
-            result.Add(new PendingBatchViewModel
+        return await (
+            from batch in pendingBatches
+            join item in invoiceItems on batch.Id equals item.MedicineBatchId into batchItems
+            from invoiceItem in batchItems.Take(1).DefaultIfEmpty()
+            orderby batch.Medicine.TradeName
+            select new PendingBatchViewModel
             {
-                BatchId = b.Id,
-                PurchaseInvoiceId = invoiceItem?.PurchaseInvoiceId ?? 0,
-                MedicineName = b.Medicine.TradeName,
-                Sku = b.Sku,
-                Dose = b.Dose,
-                BatchNumber = b.BatchNumber,
-                SupplierName = invoiceItem?.PurchaseInvoice.Supplier.Name ?? "",
-                PendingQuantity = b.CurrentQuantity,
-                PurchaseUnit = b.Medicine.PurchaseUnit.ToString()
-            });
-        }
-
-        return result;
+                BatchId = batch.Id,
+                PurchaseInvoiceId = invoiceItem == null ? 0 : invoiceItem.PurchaseInvoiceId,
+                MedicineName = batch.Medicine.TradeName,
+                Sku = batch.Sku,
+                Dose = batch.Dose,
+                BatchNumber = batch.BatchNumber,
+                SupplierName = invoiceItem == null ? "" : invoiceItem.PurchaseInvoice.Supplier.Name,
+                PendingQuantity = batch.CurrentQuantity,
+                PurchaseUnit = batch.Medicine.PurchaseUnit.ToString()
+            })
+            .ToListAsync();
     }
 
     public async Task<ActivateBatchViewModel?> GetActivateBatchModelAsync(int batchId)
