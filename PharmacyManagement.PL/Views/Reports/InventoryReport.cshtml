@@ -1,4 +1,4 @@
-@model IEnumerable<InventoryReportItemViewModel>
+@model PagedList<InventoryReportItemViewModel>
 @{ ViewData["Title"] = "Inventory Report"; }
 <div class="page-header d-flex justify-content-between align-items-center">
     <h2><i class="bi bi-box-seam"></i> Inventory Report</h2>
@@ -23,5 +23,6 @@
         }
         </tbody>
     </table>
+    <partial name="_Pagination" model="Model" />
 </div>
 

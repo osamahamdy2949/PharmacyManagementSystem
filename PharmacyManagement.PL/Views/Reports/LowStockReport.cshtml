@@ -1,4 +1,4 @@
-@model IEnumerable<MedicineViewModel>
+@model PagedList<MedicineViewModel>
 @{ ViewData["Title"] = "Low Stock Report"; }
 <div class="page-header"><h2><i class="bi bi-exclamation-triangle"></i> Low Stock Report</h2></div>
 <div class="legend-bar"><span class="legend-item"><span class="legend-swatch low"></span> Quantity &lt; @ValidationConstants.LowStockThreshold</span></div>
@@ -14,5 +14,6 @@
         }
         </tbody>
     </table>
+    <partial name="_Pagination" model="Model" />
 </div>
 

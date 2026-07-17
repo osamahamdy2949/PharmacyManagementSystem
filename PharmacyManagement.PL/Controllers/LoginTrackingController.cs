@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using PharmacyManagement.DAL.Common;
 using PharmacyManagement.DAL.Data.DbContexts;
 using PharmacyManagement.DAL.Data.Entities;
+using PharmacyManagement.PL.Helpers;
 
 namespace PharmacyManagement.PL.Controllers;
 
@@ -17,14 +18,13 @@ public class LoginTrackingController : Controller
         _context = context;
     }
 
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(int page = 1)
     {
         var logs = await _context.UserActivities
             .Include(x => x.User)
             .OrderByDescending(x => x.LoginTime)
-            .Take(100)
             .ToListAsync();
             
-        return View(logs);
+        return View(PagedList<UserActivity>.Create(logs, page));
     }
 }

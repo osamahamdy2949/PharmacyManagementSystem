@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PharmacyManagement.DAL.Common;
 using PharmacyManagement.DAL.Data.Entities;
+using PharmacyManagement.PL.Helpers;
 
 namespace PharmacyManagement.PL.Controllers;
 
@@ -20,7 +21,7 @@ public class UsersController : Controller
         _roleManager = roleManager;
     }
 
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(int page = 1)
     {
         var users = await _userManager.Users.ToListAsync();
         var model = new List<UserListItemViewModel>();
@@ -34,7 +35,7 @@ public class UsersController : Controller
                 Roles = string.Join(", ", await _userManager.GetRolesAsync(user))
             });
         }
-        return View(model);
+        return View(PagedList<UserListItemViewModel>.Create(model, page));
     }
 
     public IActionResult Create() => View(new CreateUserViewModel());

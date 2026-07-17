@@ -32,29 +32,29 @@ public class ReportsController : Controller
         _docService = docService;
     }
 
-    public async Task<IActionResult> InventoryReport() =>
-        View(await _reportService.GetInventoryReportAsync());
+    public async Task<IActionResult> InventoryReport(int page = 1) =>
+        View(PagedList<InventoryReportItemViewModel>.Create(await _reportService.GetInventoryReportAsync(), page));
 
-    public async Task<IActionResult> LowStockReport() =>
-        View(await _reportService.GetLowStockReportAsync());
+    public async Task<IActionResult> LowStockReport(int page = 1) =>
+        View(PagedList<PharmacyManagement.BLL.ViewModels.MedicineViewModels.MedicineViewModel>.Create(await _reportService.GetLowStockReportAsync(), page));
 
-    public async Task<IActionResult> ExpiryReport() =>
-        View(await _reportService.GetExpiryReportAsync());
+    public async Task<IActionResult> ExpiryReport(int page = 1) =>
+        View(PagedList<PharmacyManagement.BLL.ViewModels.MedicineViewModels.MedicineViewModel>.Create(await _reportService.GetExpiryReportAsync(), page));
 
-    public async Task<IActionResult> SalesReport(ReportPeriod period = ReportPeriod.Monthly, DateTime? from = null, DateTime? to = null)
+    public async Task<IActionResult> SalesReport(ReportPeriod period = ReportPeriod.Monthly, DateTime? from = null, DateTime? to = null, int page = 1)
     {
         ViewBag.Period = period;
         ViewBag.From = from;
         ViewBag.To = to;
-        return View(await _reportService.GetSalesReportAsync(period, from, to));
+        return View(PagedList<SalesReportItemViewModel>.Create(await _reportService.GetSalesReportAsync(period, from, to), page));
     }
 
-    public async Task<IActionResult> PurchaseReport(ReportPeriod period = ReportPeriod.Monthly, DateTime? from = null, DateTime? to = null)
+    public async Task<IActionResult> PurchaseReport(ReportPeriod period = ReportPeriod.Monthly, DateTime? from = null, DateTime? to = null, int page = 1)
     {
         ViewBag.Period = period;
         ViewBag.From = from;
         ViewBag.To = to;
-        return View(await _reportService.GetPurchaseReportAsync(period, from, to));
+        return View(PagedList<PurchaseReportItemViewModel>.Create(await _reportService.GetPurchaseReportAsync(period, from, to), page));
     }
 
     public async Task<IActionResult> ProfitReport(ReportPeriod period = ReportPeriod.Monthly, DateTime? from = null, DateTime? to = null)
@@ -65,26 +65,26 @@ public class ReportsController : Controller
         return View(await _reportService.GetProfitReportAsync(period, from, to));
     }
 
-    public async Task<IActionResult> TopSellingMedicinesReport(ReportPeriod period = ReportPeriod.Monthly, DateTime? from = null, DateTime? to = null)
+    public async Task<IActionResult> TopSellingMedicinesReport(ReportPeriod period = ReportPeriod.Monthly, DateTime? from = null, DateTime? to = null, int page = 1)
     {
         ViewBag.Period = period;
-        return View(await _reportService.GetTopSellingMedicinesReportAsync(period, from, to));
+        return View(PagedList<TopSellingMedicineViewModel>.Create(await _reportService.GetTopSellingMedicinesReportAsync(period, from, to), page));
     }
 
-    public async Task<IActionResult> SalesByCategoryReport(ReportPeriod period = ReportPeriod.Monthly, DateTime? from = null, DateTime? to = null)
+    public async Task<IActionResult> SalesByCategoryReport(ReportPeriod period = ReportPeriod.Monthly, DateTime? from = null, DateTime? to = null, int page = 1)
     {
         ViewBag.Period = period;
-        return View(await _reportService.GetSalesByCategoryReportAsync(period, from, to));
+        return View(PagedList<SalesByCategoryViewModel>.Create(await _reportService.GetSalesByCategoryReportAsync(period, from, to), page));
     }
 
-    public async Task<IActionResult> ExpiredMedicinesReport() =>
-        View(await _reportService.GetExpiredMedicinesReportAsync());
+    public async Task<IActionResult> ExpiredMedicinesReport(int page = 1) =>
+        View(PagedList<ExpiredMedicineReportItemViewModel>.Create(await _reportService.GetExpiredMedicinesReportAsync(), page));
 
-    public async Task<IActionResult> FinishedMedicinesReport()
+    public async Task<IActionResult> FinishedMedicinesReport(int page = 1)
     {
         var model = new FinishedMedicinesPageViewModel
         {
-            Medicines = await _reportService.GetFinishedMedicinesReportAsync(),
+            Medicines = PagedList<FinishedMedicineReportItemViewModel>.Create(await _reportService.GetFinishedMedicinesReportAsync(), page),
             Suppliers = await _supplierService.GetAllAsync()
         };
         return View(model);

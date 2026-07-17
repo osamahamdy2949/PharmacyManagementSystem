@@ -1,4 +1,4 @@
-@model IEnumerable<CategoryViewModel>
+@model PagedList<CategoryViewModel>
 @{ 
     ViewData["Title"] = "Categories"; 
     ViewData["PageTitle"] = "Categories"; 
@@ -41,4 +41,5 @@
             </tbody>
         </table>
     </div>
+    <partial name="_Pagination" model="Model" />
 </div>

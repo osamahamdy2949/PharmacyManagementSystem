@@ -17,7 +17,8 @@ public class SalesReturnController : Controller
         _salesReturnService = salesReturnService;
     }
 
-    public async Task<IActionResult> Index() => View(await _salesReturnService.GetAllAsync());
+    public async Task<IActionResult> Index(int page = 1) =>
+        View(PagedList<SalesReturnListItemViewModel>.Create(await _salesReturnService.GetAllAsync(), page));
 
     public async Task<IActionResult> Details(int id)
     {

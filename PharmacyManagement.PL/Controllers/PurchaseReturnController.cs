@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using PharmacyManagement.BLL.Services.Interfaces;
 using PharmacyManagement.BLL.ViewModels.PurchaseReturnViewModels;
 using PharmacyManagement.DAL.Common;
+using PharmacyManagement.PL.Helpers;
 
 namespace PharmacyManagement.PL.Controllers;
 
@@ -13,7 +14,8 @@ public class PurchaseReturnController : Controller
 
     public PurchaseReturnController(IPurchaseReturnService service) => _service = service;
 
-    public async Task<IActionResult> Index() => View(await _service.GetAllAsync());
+    public async Task<IActionResult> Index(int page = 1) =>
+        View(PagedList<PurchaseReturnListItemViewModel>.Create(await _service.GetAllAsync(), page));
 
     public async Task<IActionResult> Details(int id)
     {

@@ -1,4 +1,4 @@
-@model IEnumerable<SalesInvoiceViewModel>
+@model PagedList<SalesInvoiceViewModel>
 @{ 
     ViewData["Title"] = "Sales History"; 
     ViewData["PageTitle"] = "Sales Invoices"; 
@@ -95,4 +95,5 @@
             </tbody>
         </table>
     </div>
+    <partial name="_Pagination" model="Model" />
 </div>

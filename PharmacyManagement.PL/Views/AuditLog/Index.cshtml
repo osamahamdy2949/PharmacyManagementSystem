@@ -1,4 +1,4 @@
-@model IEnumerable<PharmacyManagement.PL.Controllers.AuditLogViewModel>
+@model PagedList<AuditLogViewModel>
 @{
     ViewData["Title"] = "Audit Logs";
     ViewData["PageTitle"] = "System Audit Logs";
@@ -55,4 +55,5 @@
             </tbody>
         </table>
     </div>
+    <partial name="_Pagination" model="Model" />
 </div>

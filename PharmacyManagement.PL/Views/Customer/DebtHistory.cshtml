@@ -1,4 +1,4 @@
-@model IEnumerable<CustomerDebtHistoryViewModel>
+@model PagedList<CustomerDebtHistoryViewModel>
 @{ ViewData["Title"] = "Debt History"; ViewData["PageTitle"] = ViewBag.CustomerName + " - Credit Invoices"; }
 
 <partial name="_PageHeader" />
@@ -68,4 +68,5 @@
             }
         </tbody>
     </table>
+    <partial name="_Pagination" model="Model" />
 </div>

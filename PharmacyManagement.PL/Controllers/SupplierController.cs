@@ -14,7 +14,8 @@ public class SupplierController : Controller
 
     public SupplierController(ISupplierService service) => _service = service;
 
-    public async Task<IActionResult> Index() => View(await _service.GetAllAsync());
+    public async Task<IActionResult> Index(int page = 1) =>
+        View(PagedList<SupplierViewModel>.Create(await _service.GetAllAsync(), page));
 
     public async Task<IActionResult> Details(int id)
     {

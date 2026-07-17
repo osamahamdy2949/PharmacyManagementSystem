@@ -29,7 +29,7 @@ public class SalesInvoiceController : Controller
         _shiftService = shiftService;
     }
 
-    public async Task<IActionResult> Index([FromQuery] string? filter)
+    public async Task<IActionResult> Index([FromQuery] string? filter, int page = 1)
     {
         var invoices = (await _salesService.GetAllAsync()).ToList();
         
@@ -43,7 +43,7 @@ public class SalesInvoiceController : Controller
             ViewBag.CurrentFilter = filter;
         }
 
-        return View(invoices);
+        return View(PagedList<PharmacyManagement.BLL.ViewModels.SalesInvoiceViewModels.SalesInvoiceViewModel>.Create(invoices, page));
     }
 
     public async Task<IActionResult> Pos()

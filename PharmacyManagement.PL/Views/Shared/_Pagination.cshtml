@@ -1,0 +1,38 @@
+@model IPagedList
+@{
+    var routeValues = Context.Request.Query
+        .Where(q => q.Key != "page")
+        .ToDictionary(q => q.Key, q => q.Value.ToString());
+}
+
+@if (Model.TotalPages > 1)
+{
+    <nav class="d-flex flex-wrap justify-content-between align-items-center gap-3 p-3 border-top bg-white" aria-label="Pagination">
+        <div class="text-muted small">
+            Showing @(((Model.PageNumber - 1) * Model.PageSize) + 1)-@Math.Min(Model.PageNumber * Model.PageSize, Model.TotalItems) of @Model.TotalItems
+        </div>
+        <ul class="pagination pagination-sm mb-0">
+            @{
+                routeValues["page"] = (Model.PageNumber - 1).ToString();
+            }
+            <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
+                <a class="page-link" asp-all-route-data="routeValues">Previous</a>
+            </li>
+
+            @for (var i = 1; i <= Model.TotalPages; i++)
+            {
+                routeValues["page"] = i.ToString();
+                <li class="page-item @(i == Model.PageNumber ? "active" : "")">
+                    <a class="page-link" asp-all-route-data="routeValues">@i</a>
+                </li>
+            }
+
+            @{
+                routeValues["page"] = (Model.PageNumber + 1).ToString();
+            }
+            <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
+                <a class="page-link" asp-all-route-data="routeValues">Next</a>
+            </li>
+        </ul>
+    </nav>
+}

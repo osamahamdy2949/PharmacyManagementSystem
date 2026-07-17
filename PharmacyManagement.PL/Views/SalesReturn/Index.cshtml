@@ -1,4 +1,4 @@
-@model IEnumerable<SalesReturnListItemViewModel>
+@model PagedList<SalesReturnListItemViewModel>
 @using PharmacyManagement.BLL.ViewModels.SalesReturnViewModels
 @{ 
     ViewData["Title"] = "Sales Returns"; 
@@ -49,4 +49,5 @@
             </tbody>
         </table>
     </div>
+    <partial name="_Pagination" model="Model" />
 </div>

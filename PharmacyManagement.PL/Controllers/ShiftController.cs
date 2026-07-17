@@ -104,12 +104,12 @@ public class ShiftController : Controller
         return RedirectToAction("Details", new { id = model.ShiftId });
     }
 
-    public async Task<IActionResult> History(DateTime? from, DateTime? to)
+    public async Task<IActionResult> History(DateTime? from, DateTime? to, int page = 1)
     {
         var shifts = await _shiftService.GetShiftHistoryAsync(from, to);
         ViewBag.From = from;
         ViewBag.To = to;
-        return View(shifts);
+        return View(PagedList<ShiftViewModel>.Create(shifts, page));
     }
     
     public async Task<IActionResult> Details(int id)

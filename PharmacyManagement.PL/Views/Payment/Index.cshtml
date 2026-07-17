@@ -1,4 +1,4 @@
-@model IEnumerable<PaymentViewModel>
+@model PagedList<PaymentViewModel>
 @{ ViewData["Title"] = "Payment History"; ViewData["PageTitle"] = "Payments"; ViewData["PageIcon"] = "bi-wallet2"; }
 @{ var filter = ViewBag.Filter as PaymentHistoryFilterViewModel ?? new PaymentHistoryFilterViewModel(); }
 @{ var customers = ViewBag.Customers as IEnumerable<CustomerViewModel> ?? new List<CustomerViewModel>(); }
@@ -100,4 +100,5 @@
             </tbody>
         </table>
     </div>
+    <partial name="_Pagination" model="Model" />
 </div>

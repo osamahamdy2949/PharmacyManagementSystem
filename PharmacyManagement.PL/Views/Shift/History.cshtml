@@ -1,4 +1,4 @@
-@model IEnumerable<ShiftViewModel>
+@model PagedList<ShiftViewModel>
 @{ 
     ViewData["Title"] = "Shift History"; 
     ViewData["PageTitle"] = "Shift Records"; 
@@ -128,4 +128,5 @@
             </tbody>
         </table>
     </div>
+    <partial name="_Pagination" model="Model" />
 </div>

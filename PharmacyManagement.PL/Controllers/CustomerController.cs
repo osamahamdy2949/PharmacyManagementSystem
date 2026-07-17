@@ -17,7 +17,8 @@ public class CustomerController : Controller
     private bool CanManageCustomers =>
         User.IsInRole(RoleNames.Administrator) || User.IsInRole(RoleNames.Pharmacist);
 
-    public async Task<IActionResult> Index() => View(await _service.GetAllAsync());
+    public async Task<IActionResult> Index(int page = 1) =>
+        View(PagedList<CustomerViewModel>.Create(await _service.GetAllAsync(), page));
 
     public async Task<IActionResult> Details(int id)
     {
@@ -31,7 +32,7 @@ public class CustomerController : Controller
         return model == null ? NotFound() : View(model);
     }
 
-    public async Task<IActionResult> DebtHistory(int id)
+    public async Task<IActionResult> DebtHistory(int id, int page = 1)
     {
         var customer = await _service.GetByIdAsync(id);
         if (customer == null) return NotFound();
@@ -40,7 +41,7 @@ public class CustomerController : Controller
         ViewBag.CustomerName = customer.Name;
         ViewBag.CustomerId = id;
         
-        return View(history);
+        return View(PagedList<CustomerDebtHistoryViewModel>.Create(history, page));
     }
 
     public IActionResult Create() => View(new CustomerViewModel());

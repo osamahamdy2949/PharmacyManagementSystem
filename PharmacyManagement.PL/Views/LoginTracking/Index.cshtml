@@ -1,4 +1,4 @@
-@model IEnumerable<PharmacyManagement.DAL.Data.Entities.UserActivity>
+@model PagedList<PharmacyManagement.DAL.Data.Entities.UserActivity>
 @{
     ViewData["Title"] = "User Login History";
     ViewData["PageTitle"] = "Login Tracking";
@@ -56,4 +56,5 @@
             </tbody>
         </table>
     </div>
+    <partial name="_Pagination" model="Model" />
 </div>

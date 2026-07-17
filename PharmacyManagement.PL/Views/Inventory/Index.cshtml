@@ -1,4 +1,4 @@
-@model IEnumerable<BatchInventoryItemViewModel>
+@model PagedList<BatchInventoryItemViewModel>
 @{
     ViewData["Title"] = "Inventory";
     var filter = (InventoryFilter)ViewBag.Filter;
@@ -74,4 +74,5 @@
             </tbody>
         </table>
     </div>
+    <partial name="_Pagination" model="Model" />
 </div>

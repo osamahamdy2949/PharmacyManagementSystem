@@ -1,4 +1,4 @@
-@model IEnumerable<MedicineViewModel>
+@model PagedList<MedicineViewModel>
 @using PharmacyManagement.DAL.Common
 @{
     ViewData["Title"] = "Medicines";
@@ -82,4 +82,5 @@
             </tbody>
         </table>
     </div>
+    <partial name="_Pagination" model="Model" />
 </div>

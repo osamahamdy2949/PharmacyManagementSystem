@@ -24,8 +24,8 @@ public class MedicineController : Controller
         _categoryService = categoryService;
     }
 
-    public async Task<IActionResult> Index(string? search) =>
-        View(await _medicineService.GetAllAsync(search));
+    public async Task<IActionResult> Index(string? search, int page = 1) =>
+        View(PagedList<MedicineViewModel>.Create(await _medicineService.GetAllAsync(search), page));
 
     public async Task<IActionResult> Details(int id)
     {

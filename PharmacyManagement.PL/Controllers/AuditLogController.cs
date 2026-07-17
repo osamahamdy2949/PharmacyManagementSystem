@@ -5,6 +5,7 @@ using PharmacyManagement.BLL.Common;
 using PharmacyManagement.DAL.Common;
 using PharmacyManagement.DAL.Data.DbContexts;
 using PharmacyManagement.DAL.Data.Entities;
+using PharmacyManagement.PL.Helpers;
 using System.Text.Json;
 
 namespace PharmacyManagement.PL.Controllers;
@@ -19,7 +20,7 @@ public class AuditLogController : Controller
         _context = context;
     }
 
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(int page = 1)
     {
         var logs = await _context.AuditLogs
             .OrderByDescending(x => x.CreatedAt)
@@ -39,7 +40,7 @@ public class AuditLogController : Controller
             EntityId = l.EntityId
         }).ToList();
 
-        return View(viewModels);
+        return View(PagedList<AuditLogViewModel>.Create(viewModels, page));
     }
     
     public async Task<IActionResult> Details(int id)

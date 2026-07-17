@@ -27,12 +27,12 @@ public class PaymentController : Controller
         _shiftService = shiftService;
     }
 
-    public async Task<IActionResult> Index(PaymentHistoryFilterViewModel filter)
+    public async Task<IActionResult> Index(PaymentHistoryFilterViewModel filter, int page = 1)
     {
         ViewBag.Customers = await _customerService.GetAllAsync();
         var payments = await _paymentService.GetPaymentHistoryAsync(filter);
         ViewBag.Filter = filter;
-        return View(payments);
+        return View(PagedList<PaymentViewModel>.Create(payments, page));
     }
 
     public async Task<IActionResult> RecordPayment(int? customerId, int? invoiceId)

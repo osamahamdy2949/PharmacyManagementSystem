@@ -1,4 +1,4 @@
-@model IEnumerable<ExpiredMedicineReportItemViewModel>
+@model PagedList<ExpiredMedicineReportItemViewModel>
 @{ ViewData["Title"] = "Expired Medicines"; }
 <h2>Expired Medicines Report</h2>
 <table class="table table-striped">
@@ -16,4 +16,4 @@
     }
     </tbody>
 </table>
-
+<partial name="_Pagination" model="Model" />

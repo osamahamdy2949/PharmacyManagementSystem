@@ -1,4 +1,4 @@
-@model IEnumerable<TopSellingMedicineViewModel>
+@model PagedList<TopSellingMedicineViewModel>
 @{ ViewData["Title"] = "Top Selling Medicines"; }
 <h2>Top Selling Medicines</h2>
 <table class="table table-striped">
@@ -10,4 +10,4 @@
     }
     </tbody>
 </table>
-
+<partial name="_Pagination" model="Model" />

@@ -13,7 +13,7 @@ public class EndShiftViewModel
 
     [Required]
     [Display(Name = "Counted Cash in Drawer")]
-    [Range(0, 1000000, ErrorMessage = "Please enter a valid cash amount")]
+    [Range(-1000000, 1000000, ErrorMessage = "Please enter a valid cash amount")]
     public decimal ClosingCash { get; set; }
     
     public string? Notes { get; set; }

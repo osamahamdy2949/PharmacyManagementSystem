@@ -14,7 +14,8 @@ public class CategoryController : Controller
 
     public CategoryController(ICategoryService service) => _service = service;
 
-    public async Task<IActionResult> Index() => View(await _service.GetAllAsync());
+    public async Task<IActionResult> Index(int page = 1) =>
+        View(PagedList<CategoryViewModel>.Create(await _service.GetAllAsync(), page));
 
     public IActionResult Create() => View(new CategoryViewModel());
 

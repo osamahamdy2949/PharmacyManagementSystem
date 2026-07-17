@@ -2,6 +2,7 @@
 @{
     ViewData["Title"] = "Finished Medicines";
     ViewData["PageTitle"] = "Finished / Out of Stock — Restock";
+    var pagedMedicines = Model.Medicines as IPagedList;
 }
 <partial name="_PageHeader" />
 <div class="mb-3 d-flex gap-2 flex-wrap">
@@ -57,6 +58,10 @@
     @if (!Model.Medicines.Any())
     {
         <p class="text-center text-muted py-4">No finished medicines.</p>
+    }
+    @if (pagedMedicines != null)
+    {
+        <partial name="_Pagination" model="pagedMedicines" />
     }
 </div>
 @section Scripts {

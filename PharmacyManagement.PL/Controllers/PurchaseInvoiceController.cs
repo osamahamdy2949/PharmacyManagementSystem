@@ -36,10 +36,10 @@ public class PurchaseInvoiceController : Controller
         _shiftService = shiftService;
     }
 
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(int page = 1)
     {
         ViewBag.PendingBatches = await _purchaseService.GetPendingBatchesAsync();
-        return View(await _purchaseService.GetAllAsync());
+        return View(PagedList<PurchaseInvoiceViewModel>.Create(await _purchaseService.GetAllAsync(), page));
     }
 
     public async Task<IActionResult> Create()
