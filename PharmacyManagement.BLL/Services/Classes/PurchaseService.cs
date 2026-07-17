@@ -17,7 +17,6 @@ public class PurchaseService : IPurchaseService
     private readonly IMapper _mapper;
     private readonly IStockService _stockService;
     private readonly IValidator<CreatePurchaseInvoiceViewModel> _createValidator;
-    private readonly IVatService _vatService;
     private readonly ICurrentUserService _currentUser;
 
     public PurchaseService(
@@ -25,14 +24,12 @@ public class PurchaseService : IPurchaseService
         IMapper mapper,
         IStockService stockService,
         IValidator<CreatePurchaseInvoiceViewModel> createValidator,
-        IVatService vatService,
         ICurrentUserService currentUser)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
         _stockService = stockService;
         _createValidator = createValidator;
-        _vatService = vatService;
         _currentUser = currentUser;
     }
 
@@ -292,15 +289,13 @@ public class PurchaseService : IPurchaseService
             invoiceItems.Add(item);
         }
 
-        var (sub, vat, total) = _vatService.Calculate(subTotal);
-
         var invoice = new PurchaseInvoice
         {
             SupplierId = model.SupplierId,
             InvoiceDate = model.InvoiceDate.Date,
-            SubTotal = sub,
-            VatAmount = vat,
-            TotalAmount = total,
+            SubTotal = subTotal,
+            VatAmount = 0,
+            TotalAmount = subTotal,
             CreatedByUserId = _currentUser.UserId,
             Items = invoiceItems
         };
@@ -379,15 +374,14 @@ public class PurchaseService : IPurchaseService
 
         var unitPrice = medicine.PurchasePrice > 0 ? medicine.PurchasePrice : 0;
         var lineTotal = request.PurchaseQuantity * unitPrice;
-        var (sub, vat, total) = _vatService.Calculate(lineTotal);
 
         var invoice = new PurchaseInvoice
         {
             SupplierId = request.SupplierId,
             InvoiceDate = DateTime.Now,
-            SubTotal = sub,
-            VatAmount = vat,
-            TotalAmount = total,
+            SubTotal = lineTotal,
+            VatAmount = 0,
+            TotalAmount = lineTotal,
             CreatedByUserId = _currentUser.UserId,
             Items =
             [

@@ -189,10 +189,27 @@ public class ShiftService : IShiftService
         var creditSales = await salesQuery
             .Where(s => s.SaleType == SaleType.Credit)
             .SumAsync(s => s.TotalAmount);
+
+        var creditSaleIds = await salesQuery
+            .Where(s => s.SaleType == SaleType.Credit)
+            .Select(s => s.Id)
+            .ToListAsync();
+
+        var creditInvoicePayments = creditSaleIds.Count == 0
+            ? 0
+            : await _unitOfWork.GetRepository<Payment>().Query()
+                .AsNoTracking()
+                .Where(p => p.SalesInvoiceId.HasValue
+                    && creditSaleIds.Contains(p.SalesInvoiceId.Value)
+                    && p.CreatedAt >= startTime
+                    && p.CreatedAt <= endTime)
+                .SumAsync(p => p.AmountPaid);
         
-        var initialCreditPayments = await salesQuery
+        var creditInvoicePaidAmount = await salesQuery
             .Where(s => s.SaleType == SaleType.Credit)
             .SumAsync(s => s.PaidAmount);
+
+        var initialCreditPayments = Math.Max(0, creditInvoicePaidAmount - creditInvoicePayments);
         
         var payments = await _unitOfWork.GetRepository<Payment>().Query()
             .AsNoTracking()

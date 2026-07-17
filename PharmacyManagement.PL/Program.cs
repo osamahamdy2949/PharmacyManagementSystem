@@ -37,7 +37,6 @@ public class Program
         builder.Services.AddScoped<CurrentUserService>();
         builder.Services.AddScoped<ICurrentUserService>(sp => sp.GetRequiredService<CurrentUserService>());
         builder.Services.AddScoped<IAuditUserProvider>(sp => sp.GetRequiredService<CurrentUserService>());
-        builder.Services.Configure<VatSettings>(builder.Configuration.GetSection("Vat"));
 
         builder.Services.AddDataAccess(connectionString);
 

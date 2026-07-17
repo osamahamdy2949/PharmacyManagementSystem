@@ -20,7 +20,6 @@ public static class DependencyInjection
         // Purchase/Sales POS use service-layer validation
 
         services.AddScoped<ICategoryService, CategoryService>();
-        services.AddScoped<IVatService, VatService>();
         services.AddScoped<IStockService, StockService>();
         services.AddScoped<IMedicineService, MedicineService>();
         services.AddScoped<ISupplierService, SupplierService>();

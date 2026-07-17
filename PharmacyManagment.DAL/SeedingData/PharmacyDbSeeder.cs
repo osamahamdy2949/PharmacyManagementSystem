@@ -7,8 +7,6 @@ namespace PharmacyManagement.DAL.SeedingData;
 
 public static class PharmacyDbSeeder
 {
-    private const decimal VatRate = 0.14m;
-
     public static async Task SeedAsync(PharmacyDbContext context)
     {
         if (await context.Categories.AnyAsync())
@@ -60,14 +58,13 @@ public static class PharmacyDbSeeder
         await context.SaveChangesAsync();
 
         var purchaseSub = 50m * 5.50m + 30m * 3.00m;
-        var purchaseVat = Math.Round(purchaseSub * VatRate, 2);
         var purchaseInvoice = new PurchaseInvoice
         {
             InvoiceDate = DateTime.Today.AddDays(-5),
             SupplierId = suppliers[0].Id,
             SubTotal = purchaseSub,
-            VatAmount = purchaseVat,
-            TotalAmount = purchaseSub + purchaseVat
+            VatAmount = 0,
+            TotalAmount = purchaseSub
         };
         context.PurchaseInvoices.Add(purchaseInvoice);
         await context.SaveChangesAsync();
@@ -83,14 +80,13 @@ public static class PharmacyDbSeeder
         );
 
         var salesSub = 2m * 4.50m + 5m * 7.50m;
-        var salesVat = Math.Round(salesSub * VatRate, 2);
         var salesInvoice = new SalesInvoice
         {
             InvoiceDate = DateTime.Today.AddDays(-2),
             CustomerId = customers[0].Id,
             SubTotal = salesSub,
-            VatAmount = salesVat,
-            TotalAmount = salesSub + salesVat
+            VatAmount = 0,
+            TotalAmount = salesSub
         };
         context.SalesInvoices.Add(salesInvoice);
         await context.SaveChangesAsync();

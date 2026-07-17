@@ -18,7 +18,6 @@ public class SalesService : ISalesService
     private readonly IMapper _mapper;
     private readonly IStockService _stockService;
     private readonly ICustomerService _customerService;
-    private readonly IVatService _vatService;
     private readonly ICurrentUserService _currentUser;
 
     public SalesService(
@@ -26,14 +25,12 @@ public class SalesService : ISalesService
         IMapper mapper,
         IStockService stockService,
         ICustomerService customerService,
-        IVatService vatService,
         ICurrentUserService currentUser)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
         _stockService = stockService;
         _customerService = customerService;
-        _vatService = vatService;
         _currentUser = currentUser;
     }
 
@@ -202,8 +199,8 @@ public class SalesService : ISalesService
                 }
             }
 
-            var subTotal = invoiceLines.Sum(i => _vatService.LineTotal(i.UnitPrice, i.Quantity, i.Discount));
-            var (sub, vat, total) = _vatService.Calculate(subTotal);
+            var subTotal = invoiceLines.Sum(i => Math.Max(0, i.UnitPrice * i.Quantity - i.Discount));
+            var total = subTotal;
 
             var isCredit = model.SaleType == 1; // 1 = Credit, 0 = Cash
             var paidAmount = isCredit ? model.PaidAmount : total;
@@ -215,8 +212,8 @@ public class SalesService : ISalesService
                 CustomerId = customerId,
                 InvoiceDate = DateTime.Now,
                 DoctorName = model.DoctorName?.Trim(),
-                SubTotal = sub,
-                VatAmount = vat,
+                SubTotal = subTotal,
+                VatAmount = 0,
                 TotalAmount = total,
                 SaleType = isCredit ? SaleType.Credit : SaleType.Cash,
                 PaidAmount = paidAmount,
@@ -246,8 +243,8 @@ public class SalesService : ISalesService
             return ServiceResult<PosCheckoutResultViewModel>.Ok(new PosCheckoutResultViewModel
             {
                 InvoiceId = invoice.Id,
-                SubTotal = sub,
-                VatAmount = vat,
+                SubTotal = subTotal,
+                VatAmount = 0,
                 TotalAmount = total,
                 ItemCount = invoiceLines.Count
             });
