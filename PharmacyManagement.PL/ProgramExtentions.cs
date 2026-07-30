@@ -25,7 +25,7 @@ namespace PharmacyManagement.PL
                 await dbcontext.Database.MigrateAsync();
             }
 
-            await PharmacyDbSeeder.SeedAsync(dbcontext,logger);
+            //await PharmacyDbSeeder.SeedAsync(dbcontext,logger);
 
             await IdentitySeeder.SeedAsync(userManager,roleManager,logger);
         }
