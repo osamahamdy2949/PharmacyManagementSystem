@@ -52,7 +52,7 @@ public class Program
             .AddDefaultTokenProviders();
 
         builder.Services.AddBusinessLogic();
-        builder.Services.AddScoped<PharmacyManagement.PL.Services.InvoicePdfService>();
+        builder.Services.AddScoped<InvoicePdfService>();
 
         builder.Services.ConfigureApplicationCookie(options =>
         {
@@ -65,6 +65,8 @@ public class Program
         });
 
         var app = builder.Build();
+
+        await app.MigrateAndSeedDarabaseAsync();
 
         if (!app.Environment.IsDevelopment())
         {
