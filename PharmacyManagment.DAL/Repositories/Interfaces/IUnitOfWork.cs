@@ -3,7 +3,7 @@ using PharmacyManagement.DAL.Data.Entities;
 
 namespace PharmacyManagement.DAL.Repositories.Interfaces;
 
-public interface IUnitOfWork : IDisposable
+public interface IUnitOfWork
 {
     PharmacyDbContext Context { get; }
     IGenericRepository<TEntity> GetRepository<TEntity>() where TEntity : BaseEntity, new();

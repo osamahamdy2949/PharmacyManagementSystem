@@ -17,18 +17,25 @@ public class GenericRepository<TEntity> : IGenericRepository<TEntity> where TEnt
         _dbSet = context.Set<TEntity>();
     }
 
-    public async Task<IEnumerable<TEntity>> GetAllAsync(bool tracking = false, CancellationToken ct = default)
+    public async Task<IEnumerable<TEntity>> GetAllAsync(bool tracking, CancellationToken ct)
     {
         IQueryable<TEntity> query = tracking ? _dbSet : _dbSet.AsNoTracking();
 
         return await query.ToListAsync(ct);
     }
 
-    public async Task<TEntity?> GetByIdAsync(int id, bool tracking = false, CancellationToken ct = default)
+    public async Task<TEntity?> GetByIdAsync(int id, bool tracking, CancellationToken ct)
     {
-        return await _dbSet.FindAsync(id, ct);
+        //return await _dbSet.FindAsync(id, ct); FindAsync Use Tracking By Defualt 
+
+        if (tracking)
+            return await _dbSet.FindAsync(id, ct);
+
+        return await _dbSet
+            .AsNoTracking()
+            .FirstOrDefaultAsync(e => e.Id == id, ct);
     }
-    public Task<bool> AnyAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken ct = default)
+    public Task<bool> AnyAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken ct)
     {
         return _dbSet.AsNoTracking().AnyAsync(predicate, ct);
     }
@@ -37,7 +44,7 @@ public class GenericRepository<TEntity> : IGenericRepository<TEntity> where TEnt
     public void Update(TEntity entity) => _dbSet.Update(entity);
 
     public void Remove(TEntity entity) => _dbSet.Remove(entity);
-    public async Task<TEntity?> FirstOrDefaultAsync(Expression<Func<TEntity, bool>> predicate, bool tracking = false, CancellationToken ct = default)
+    public async Task<TEntity?> FirstOrDefaultAsync(Expression<Func<TEntity, bool>> predicate, bool tracking, CancellationToken ct)
     {
         IQueryable<TEntity> query = tracking ? _dbSet : _dbSet.AsNoTracking();
 

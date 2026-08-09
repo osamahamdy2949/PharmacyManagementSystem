@@ -33,6 +33,4 @@ public class UnitOfWork : IUnitOfWork
     }
 
     public Task<int> SaveChangesAsync(CancellationToken ct = default) => _context.SaveChangesAsync(ct);
-
-    public void Dispose() => _context.Dispose();
 }

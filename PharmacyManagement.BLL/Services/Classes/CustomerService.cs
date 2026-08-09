@@ -6,6 +6,7 @@ using PharmacyManagement.BLL.Services.Interfaces;
 using PharmacyManagement.BLL.Validators;
 using PharmacyManagement.BLL.ViewModels.CustomerViewModels;
 using PharmacyManagement.DAL.Data.Entities;
+using PharmacyManagement.DAL.Data.Entities.Enums;
 using PharmacyManagement.DAL.Repositories.Interfaces;
 
 namespace PharmacyManagement.BLL.Services.Classes;
@@ -23,39 +24,35 @@ public class CustomerService : ICustomerService
         _validator = validator;
     }
 
-    public async Task<IReadOnlyList<CustomerViewModel>> GetAllAsync()
+    public async Task<IReadOnlyList<CustomerViewModel>> GetAllAsync(CancellationToken ct)
     {
-        var items = await _unitOfWork.GetRepository<Customer>().Query()
-            .AsNoTracking()
-            .ToListAsync();
+        var items = await _unitOfWork.GetRepository<Customer>().GetAllAsync(ct: ct);
         return _mapper.Map<IReadOnlyList<CustomerViewModel>>(items);
     }
 
-    public async Task<CustomerViewModel?> GetByIdAsync(int id)
+    public async Task<CustomerViewModel?> GetByIdAsync(int id, CancellationToken ct)
     {
-        var item = await _unitOfWork.GetRepository<Customer>().Query()
-            .AsNoTracking()
-            .FirstOrDefaultAsync(c => c.Id == id);
+        var item = await _unitOfWork.GetRepository<Customer>().GetByIdAsync(id, ct: ct);
         return item == null ? null : _mapper.Map<CustomerViewModel>(item);
     }
 
-    public async Task<ServiceResult> CreateAsync(CustomerViewModel model)
+    public async Task<ServiceResult> CreateAsync(CustomerViewModel model, CancellationToken ct)
     {
         var validation = await ValidationHelper.ValidateAsync(_validator, model);
         if (validation != null) return validation;
 
         var entity = _mapper.Map<Customer>(model);
         _unitOfWork.GetRepository<Customer>().Add(entity);
-        await _unitOfWork.SaveChangesAsync();
+        await _unitOfWork.SaveChangesAsync(ct);
         return ServiceResult.Ok();
     }
 
-    public async Task<ServiceResult> UpdateAsync(CustomerViewModel model, bool canManage)
+    public async Task<ServiceResult> UpdateAsync(CustomerViewModel model, bool canManage, CancellationToken ct)
     {
         if (!canManage)
             return ServiceResult.Fail("You are not allowed to edit customers.");
 
-        var entity = await _unitOfWork.GetRepository<Customer>().GetByIdAsync(model.Id);
+        var entity = await _unitOfWork.GetRepository<Customer>().GetByIdAsync(model.Id, true, ct);
         if (entity == null) return ServiceResult.Fail("Customer not found.");
 
         if (string.IsNullOrWhiteSpace(model.Phone))
@@ -67,33 +64,35 @@ public class CustomerService : ICustomerService
         entity.Phone = model.Phone.Trim();
 
         _unitOfWork.GetRepository<Customer>().Update(entity);
-        await _unitOfWork.SaveChangesAsync();
+        await _unitOfWork.SaveChangesAsync(ct);
         return ServiceResult.Ok();
     }
 
-    public async Task<ServiceResult> DeleteAsync(int id)
+    public async Task<ServiceResult> DeleteAsync(int id, CancellationToken ct)
     {
-        var entity = await _unitOfWork.GetRepository<Customer>().GetByIdAsync(id);
+        var entity = await _unitOfWork.GetRepository<Customer>().GetByIdAsync(id, ct:ct);
         if (entity == null) return ServiceResult.Fail("Customer not found.");
 
         _unitOfWork.GetRepository<Customer>().Remove(entity);
-        await _unitOfWork.SaveChangesAsync();
+        await _unitOfWork.SaveChangesAsync(ct);
         return ServiceResult.Ok();
     }
 
-    public async Task<ServiceResult<int>> GetOrCreateByNamePhoneAsync(string name, string? phone)
+    public async Task<ServiceResult<int>> GetOrCreateByNamePhoneAsync(string name, string? phone, CancellationToken ct)
     {
         var trimmedName = name.Trim();
         if (string.IsNullOrWhiteSpace(trimmedName))
             return ServiceResult<int>.Fail("Customer name is required.");
 
         var normalizedName = trimmedName.ToUpper();
+        
         var normalizedPhone = phone?.Trim();
+        
         var existing = await _unitOfWork.GetRepository<Customer>().Query()
             .AsNoTracking()
             .FirstOrDefaultAsync(c =>
                 c.Name.ToUpper() == normalizedName &&
-                (string.IsNullOrWhiteSpace(normalizedPhone) || c.Phone == normalizedPhone));
+                (string.IsNullOrWhiteSpace(normalizedPhone) || c.Phone == normalizedPhone), ct);
 
         if (existing != null)
             return ServiceResult<int>.Ok(existing.Id);
@@ -105,11 +104,11 @@ public class CustomerService : ICustomerService
         };
 
         _unitOfWork.GetRepository<Customer>().Add(customer);
-        await _unitOfWork.SaveChangesAsync();
+        await _unitOfWork.SaveChangesAsync(ct);
         return ServiceResult<int>.Ok(customer.Id);
     }
 
-    public async Task<CustomerProfileViewModel?> GetCustomerProfileAsync(int id)
+    public async Task<CustomerProfileViewModel?> GetCustomerProfileAsync(int id, CancellationToken ct)
     {
         var item = await _unitOfWork.GetRepository<Customer>().Query()
             .AsNoTracking()
@@ -119,7 +118,7 @@ public class CustomerService : ICustomerService
                 Customer = c,
                 TotalInvoices = c.SalesInvoices.Count
             })
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(ct);
 
         if (item == null)
             return null;
@@ -129,11 +128,11 @@ public class CustomerService : ICustomerService
         return vm;
     }
 
-    public async Task<IReadOnlyList<CustomerDebtHistoryViewModel>> GetCustomerDebtHistoryAsync(int id)
+    public async Task<IReadOnlyList<CustomerDebtHistoryViewModel>> GetCustomerDebtHistoryAsync(int id, CancellationToken ct)
     {
         var invoices = await _unitOfWork.GetRepository<SalesInvoice>().Query()
             .AsNoTracking()
-            .Where(s => s.CustomerId == id && s.SaleType == PharmacyManagement.DAL.Data.Entities.Enums.SaleType.Credit)
+            .Where(s => s.CustomerId == id && s.SaleType == SaleType.Credit)
             .OrderByDescending(s => s.InvoiceDate)
             .Select(s => new CustomerDebtHistoryViewModel
             {
@@ -144,7 +143,7 @@ public class CustomerService : ICustomerService
                 RemainingAmount = s.RemainingAmount,
                 PaymentStatus = s.PaymentStatus.ToString()
             })
-            .ToListAsync();
+            .ToListAsync(ct);
 
         return invoices;
     }
