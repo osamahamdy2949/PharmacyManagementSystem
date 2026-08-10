@@ -17,23 +17,20 @@ public class GenericRepository<TEntity> : IGenericRepository<TEntity> where TEnt
         _dbSet = context.Set<TEntity>();
     }
 
-    public async Task<IEnumerable<TEntity>> GetAllAsync(bool tracking, CancellationToken ct)
+    public async Task<IEnumerable<TEntity>> GetAllAsync(Expression<Func<TEntity, bool>>? predicate = null, bool tracking = false, CancellationToken ct = default)
     {
         IQueryable<TEntity> query = tracking ? _dbSet : _dbSet.AsNoTracking();
+
+        if (predicate is not null) query = query.Where(predicate);
 
         return await query.ToListAsync(ct);
     }
 
-    public async Task<TEntity?> GetByIdAsync(int id, bool tracking, CancellationToken ct)
+    public async Task<TEntity?> GetByIdAsync(int id, bool tracking = false, CancellationToken ct = default)
     {
-        //return await _dbSet.FindAsync(id, ct); FindAsync Use Tracking By Defualt 
+        IQueryable<TEntity> query = tracking ? _dbSet : _dbSet.AsNoTracking();
 
-        if (tracking)
-            return await _dbSet.FindAsync(id, ct);
-
-        return await _dbSet
-            .AsNoTracking()
-            .FirstOrDefaultAsync(e => e.Id == id, ct);
+        return await query.FirstOrDefaultAsync(entity => entity.Id == id, ct);
     }
     public Task<bool> AnyAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken ct)
     {
@@ -43,7 +40,7 @@ public class GenericRepository<TEntity> : IGenericRepository<TEntity> where TEnt
 
     public void Update(TEntity entity) => _dbSet.Update(entity);
 
-    public void Remove(TEntity entity) => _dbSet.Remove(entity);
+    public void Delete(TEntity entity) => _dbSet.Remove(entity);
     public async Task<TEntity?> FirstOrDefaultAsync(Expression<Func<TEntity, bool>> predicate, bool tracking, CancellationToken ct)
     {
         IQueryable<TEntity> query = tracking ? _dbSet : _dbSet.AsNoTracking();
@@ -52,10 +49,12 @@ public class GenericRepository<TEntity> : IGenericRepository<TEntity> where TEnt
     }
     public IQueryable<TEntity> Query() => _dbSet.AsQueryable();
 
-    //private static IQueryable<TEntity> ApplyIncludes(IQueryable<TEntity> query, Expression<Func<TEntity, object>>[] includes)
-    //{
-    //    foreach (var include in includes)
-    //        query = query.Include(include);
-    //    return query;
-    //}
+    public async Task<int> CountAsync(Expression<Func<TEntity, bool>>? predicate = null, CancellationToken ct = default)
+    {
+        IQueryable<TEntity> query = _dbSet.AsNoTracking();
+
+        if (predicate is not null) query = query.Where(predicate);
+
+        return await query.CountAsync(ct);
+    }
 }
