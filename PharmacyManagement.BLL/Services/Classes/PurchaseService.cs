@@ -1,6 +1,5 @@
 using AutoMapper;
 using FluentValidation;
-using Microsoft.EntityFrameworkCore;
 using PharmacyManagement.BLL.Common;
 using PharmacyManagement.BLL.Services.Interfaces;
 using PharmacyManagement.BLL.Validators;
@@ -14,6 +13,10 @@ namespace PharmacyManagement.BLL.Services.Classes;
 public class PurchaseService : IPurchaseService
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IPurchaseInvoiceRepository _purchaseInvoiceRepository;
+    private readonly IMedicineBatchRepository _medicineBatchRepository;
+    private readonly IMedicineRepository _medicineRepository;
+    private readonly IDataTransactionManager _transactionManager;
     private readonly IMapper _mapper;
     private readonly IStockService _stockService;
     private readonly IValidator<CreatePurchaseInvoiceViewModel> _createValidator;
@@ -21,12 +24,20 @@ public class PurchaseService : IPurchaseService
 
     public PurchaseService(
         IUnitOfWork unitOfWork,
+        IPurchaseInvoiceRepository purchaseInvoiceRepository,
+        IMedicineBatchRepository medicineBatchRepository,
+        IMedicineRepository medicineRepository,
+        IDataTransactionManager transactionManager,
         IMapper mapper,
         IStockService stockService,
         IValidator<CreatePurchaseInvoiceViewModel> createValidator,
         ICurrentUserService currentUser)
     {
         _unitOfWork = unitOfWork;
+        _purchaseInvoiceRepository = purchaseInvoiceRepository;
+        _medicineBatchRepository = medicineBatchRepository;
+        _medicineRepository = medicineRepository;
+        _transactionManager = transactionManager;
         _mapper = mapper;
         _stockService = stockService;
         _createValidator = createValidator;
@@ -35,30 +46,19 @@ public class PurchaseService : IPurchaseService
 
     public async Task<IReadOnlyList<PurchaseInvoiceViewModel>> GetAllAsync()
     {
-        var items = await _unitOfWork.GetRepository<PurchaseInvoice>().Query()
-            .AsNoTracking()
-            .Include(p => p.Supplier)
-            .Include(p => p.Items).ThenInclude(i => i.Medicine)
-            .OrderByDescending(p => p.InvoiceDate)
-            .ToListAsync();
+        var items = await _purchaseInvoiceRepository.GetAllWithDetailsAsync();
         return _mapper.Map<IReadOnlyList<PurchaseInvoiceViewModel>>(items);
     }
 
     public async Task<PurchaseInvoiceViewModel?> GetByIdAsync(int id)
     {
-        var item = await _unitOfWork.GetRepository<PurchaseInvoice>().Query()
-            .AsNoTracking()
-            .Include(p => p.Supplier)
-            .Include(p => p.Items).ThenInclude(i => i.Medicine)
-            .FirstOrDefaultAsync(p => p.Id == id);
+        var item = await _purchaseInvoiceRepository.GetByIdWithDetailsAsync(id);
         return item == null ? null : _mapper.Map<PurchaseInvoiceViewModel>(item);
     }
 
     public async Task<string> GetNextBatchNumberAsync()
     {
-        var existing = await _unitOfWork.GetRepository<MedicineBatch>().Query()
-            .Select(b => b.BatchNumber)
-            .ToListAsync();
+        var existing = await _medicineBatchRepository.GetBatchNumbersAsync();
 
         var max = 0;
         foreach (var bn in existing)
@@ -72,47 +72,28 @@ public class PurchaseService : IPurchaseService
     }
 
     public async Task<IReadOnlyList<string>> GetExistingBatchNumbersAsync() =>
-        await _unitOfWork.GetRepository<MedicineBatch>().Query()
-            .AsNoTracking()
-            .Select(b => b.BatchNumber)
-            .Distinct()
-            .OrderBy(b => b)
-            .ToListAsync();
+        await _medicineBatchRepository.GetBatchNumbersAsync(distinct: true);
 
     public async Task<IReadOnlyList<PendingBatchViewModel>> GetPendingBatchesAsync()
     {
-        var pendingBatches = _unitOfWork.GetRepository<MedicineBatch>().Query()
-            .AsNoTracking()
-            .Where(b => !b.IsActive && b.CurrentQuantity > 0);
-
-        var invoiceItems = _unitOfWork.GetRepository<PurchaseInvoiceItem>().Query()
-            .AsNoTracking();
-
-        return await (
-            from batch in pendingBatches
-            join item in invoiceItems on batch.Id equals item.MedicineBatchId into batchItems
-            from invoiceItem in batchItems.Take(1).DefaultIfEmpty()
-            orderby batch.Medicine.TradeName
-            select new PendingBatchViewModel
-            {
-                BatchId = batch.Id,
-                PurchaseInvoiceId = invoiceItem == null ? 0 : invoiceItem.PurchaseInvoiceId,
-                MedicineName = batch.Medicine.TradeName,
-                Sku = batch.Sku,
-                Dose = batch.Dose,
-                BatchNumber = batch.BatchNumber,
-                SupplierName = invoiceItem == null ? "" : invoiceItem.PurchaseInvoice.Supplier.Name,
-                PendingQuantity = batch.CurrentQuantity,
-                PurchaseUnit = batch.Medicine.PurchaseUnit.ToString()
-            })
-            .ToListAsync();
+        var pendingBatches = await _medicineBatchRepository.GetPendingBatchesAsync();
+        return pendingBatches.Select(batch => new PendingBatchViewModel
+        {
+            BatchId = batch.BatchId,
+            PurchaseInvoiceId = batch.PurchaseInvoiceId,
+            MedicineName = batch.MedicineName,
+            Sku = batch.Sku,
+            Dose = batch.Dose,
+            BatchNumber = batch.BatchNumber,
+            SupplierName = batch.SupplierName,
+            PendingQuantity = batch.PendingQuantity,
+            PurchaseUnit = batch.PurchaseUnit
+        }).ToList();
     }
 
     public async Task<ActivateBatchViewModel?> GetActivateBatchModelAsync(int batchId)
     {
-        var batch = await _unitOfWork.GetRepository<MedicineBatch>().Query()
-            .Include(b => b.Medicine)
-            .FirstOrDefaultAsync(b => b.Id == batchId && !b.IsActive);
+        var batch = await _medicineBatchRepository.GetInactiveWithMedicineAsync(batchId);
 
         if (batch == null) return null;
 
@@ -138,9 +119,7 @@ public class PurchaseService : IPurchaseService
 
     public async Task<ServiceResult> ActivateBatchAsync(ActivateBatchViewModel model)
     {
-        var batch = await _unitOfWork.GetRepository<MedicineBatch>().Query()
-            .Include(b => b.Medicine)
-            .FirstOrDefaultAsync(b => b.Id == model.BatchId && !b.IsActive);
+        var batch = await _medicineBatchRepository.GetInactiveWithMedicineAsync(model.BatchId);
 
         if (batch == null)
             return ServiceResult.Fail("Pending batch not found or already activated.");
@@ -153,10 +132,7 @@ public class PurchaseService : IPurchaseService
         if (uniqueBarcodes.Count != purchaseUnits)
             return ServiceResult.Fail("All provided barcodes must be unique and non-empty.");
 
-        var existingBarcodes = await _unitOfWork.GetRepository<MedicineBatch>().Query()
-            .Where(b => b.Barcode != null && uniqueBarcodes.Contains(b.Barcode))
-            .Select(b => b.Barcode)
-            .ToListAsync();
+        var existingBarcodes = await _medicineBatchRepository.GetExistingBarcodesAsync(uniqueBarcodes);
 
         if (existingBarcodes.Any())
             return ServiceResult.Fail($"The following barcodes already exist: {string.Join(", ", existingBarcodes)}");
@@ -215,10 +191,7 @@ public class PurchaseService : IPurchaseService
         await _unitOfWork.SaveChangesAsync();
 
         // 3. Update stock transactions
-        var invoiceId = await _unitOfWork.GetRepository<PurchaseInvoiceItem>().Query()
-            .Where(i => i.MedicineBatchId == batch.Id)
-            .Select(i => i.PurchaseInvoiceId)
-            .FirstOrDefaultAsync();
+        var invoiceId = await _medicineBatchRepository.GetPurchaseInvoiceIdByBatchIdAsync(batch.Id);
 
         if (invoiceId > 0)
         {
@@ -251,9 +224,7 @@ public class PurchaseService : IPurchaseService
         var invoiceItems = new List<PurchaseInvoiceItem>();
         var subTotal = 0m;
 
-        var existingBatches = await _unitOfWork.GetRepository<MedicineBatch>().Query()
-            .Select(b => b.BatchNumber)
-            .ToListAsync();
+        var existingBatches = await _medicineBatchRepository.GetBatchNumbersAsync();
         var nextBatchBase = 0;
         foreach (var bn in existingBatches)
         {
@@ -264,8 +235,7 @@ public class PurchaseService : IPurchaseService
 
         foreach (var line in activeLines)
         {
-            var medicine = await _unitOfWork.GetRepository<Medicine>().Query()
-                .FirstOrDefaultAsync(m => m.Id == line.MedicineId);
+            var medicine = await _medicineRepository.GetTrackedByIdAsync(line.MedicineId!.Value);
 
             if (medicine == null)
                 return ServiceResult<int>.Fail($"Medicine id {line.MedicineId} not found.");
@@ -300,7 +270,7 @@ public class PurchaseService : IPurchaseService
             Items = invoiceItems
         };
 
-        await using var transaction = await _unitOfWork.Context.Database.BeginTransactionAsync();
+        await using var transaction = await _transactionManager.BeginTransactionAsync();
         try
         {
             _unitOfWork.GetRepository<PurchaseInvoice>().Add(invoice);
@@ -310,8 +280,7 @@ public class PurchaseService : IPurchaseService
             {
                 var line = activeLines[i];
                 var item = invoiceItems[i];
-                var medicine = await _unitOfWork.GetRepository<Medicine>().Query()
-                    .FirstAsync(m => m.Id == line.MedicineId);
+                var medicine = (await _medicineRepository.GetTrackedByIdAsync(line.MedicineId!.Value))!;
 
                 var batchNumber = item.BatchNumber;
 
@@ -354,8 +323,7 @@ public class PurchaseService : IPurchaseService
         if (string.IsNullOrWhiteSpace(request.Dose))
             return ServiceResult<int>.Fail("Dose is required.");
 
-        var medicine = await _unitOfWork.GetRepository<Medicine>().Query()
-            .FirstOrDefaultAsync(m => m.Id == request.MedicineId);
+        var medicine = await _medicineRepository.GetTrackedByIdAsync(request.MedicineId);
 
         if (medicine == null)
             return ServiceResult<int>.Fail("Medicine not found.");
@@ -425,8 +393,7 @@ public class PurchaseService : IPurchaseService
         if (newQuantity <= 0)
             return ServiceResult.Fail("Quantity must be greater than 0.");
 
-        var batch = await _unitOfWork.GetRepository<MedicineBatch>().Query()
-            .FirstOrDefaultAsync(b => b.Id == batchId && !b.IsActive);
+        var batch = await _medicineBatchRepository.GetTrackedInactiveByIdAsync(batchId);
 
         if (batch == null)
             return ServiceResult.Fail("Pending batch not found.");
@@ -438,13 +405,12 @@ public class PurchaseService : IPurchaseService
 
     public async Task<ServiceResult> DeletePendingBatchAsync(int batchId)
     {
-        var batch = await _unitOfWork.GetRepository<MedicineBatch>().Query()
-            .FirstOrDefaultAsync(b => b.Id == batchId && !b.IsActive);
+        var batch = await _medicineBatchRepository.GetTrackedInactiveByIdAsync(batchId);
 
         if (batch == null)
             return ServiceResult.Fail("Pending batch not found.");
 
-        _unitOfWork.GetRepository<MedicineBatch>().Remove(batch);
+        _unitOfWork.GetRepository<MedicineBatch>().Delete(batch);
         await _unitOfWork.SaveChangesAsync();
         return ServiceResult.Ok();
     }

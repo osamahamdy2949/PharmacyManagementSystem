@@ -1,5 +1,4 @@
 using AutoMapper;
-using Microsoft.EntityFrameworkCore;
 using PharmacyManagement.BLL.Common;
 using PharmacyManagement.BLL.Services.Interfaces;
 using PharmacyManagement.BLL.ViewModels.ShiftViewModels;
@@ -13,12 +12,24 @@ namespace PharmacyManagement.BLL.Services.Classes;
 public class ShiftService : IShiftService
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IShiftRepository _shiftRepository;
+    private readonly ISalesInvoiceRepository _salesInvoiceRepository;
+    private readonly IApplicationUserRepository _applicationUserRepository;
     private readonly IMapper _mapper;
     private readonly ICurrentUserService _currentUser;
 
-    public ShiftService(IUnitOfWork unitOfWork, IMapper mapper, ICurrentUserService currentUser)
+    public ShiftService(
+        IUnitOfWork unitOfWork,
+        IShiftRepository shiftRepository,
+        ISalesInvoiceRepository salesInvoiceRepository,
+        IApplicationUserRepository applicationUserRepository,
+        IMapper mapper,
+        ICurrentUserService currentUser)
     {
         _unitOfWork = unitOfWork;
+        _shiftRepository = shiftRepository;
+        _salesInvoiceRepository = salesInvoiceRepository;
+        _applicationUserRepository = applicationUserRepository;
         _mapper = mapper;
         _currentUser = currentUser;
     }
@@ -44,8 +55,7 @@ public class ShiftService : IShiftService
 
     public async Task<ServiceResult> EndShiftAsync(EndShiftViewModel model)
     {
-        var activeShift = await _unitOfWork.GetRepository<Shift>().Query()
-            .FirstOrDefaultAsync(s => s.Id == model.ShiftId && s.IsActive);
+        var activeShift = await _shiftRepository.GetActiveShiftByIdAsync(model.ShiftId);
 
         if (activeShift == null)
             return ServiceResult.Fail("Invalid shift or shift is already closed.");
@@ -103,8 +113,7 @@ public class ShiftService : IShiftService
 
     public async Task<ShiftSummaryViewModel?> GetShiftSummaryAsync(int shiftId)
     {
-        var shift = await _unitOfWork.GetRepository<Shift>().Query()
-            .FirstOrDefaultAsync(s => s.Id == shiftId && s.IsActive);
+        var shift = await _shiftRepository.GetActiveShiftByIdAsync(shiftId);
 
         if (shift == null)
             return null;
@@ -117,11 +126,7 @@ public class ShiftService : IShiftService
 
     private async Task<ShiftSummaryViewModel> BuildShiftSummaryAsync(Shift activeShift)
     {
-        var userName = await _unitOfWork.Context.Set<ApplicationUser>()
-            .AsNoTracking()
-            .Where(u => u.Id == activeShift.UserId)
-            .Select(u => u.FullName)
-            .FirstOrDefaultAsync();
+        var userName = await _applicationUserRepository.GetFullNameByIdAsync(activeShift.UserId);
         var totals = await CalculateShiftTotalsAsync(activeShift.UserId, activeShift.StartTime, DateTime.UtcNow);
 
         return new ShiftSummaryViewModel
@@ -137,106 +142,40 @@ public class ShiftService : IShiftService
 
     public async Task<IReadOnlyList<ShiftViewModel>> GetShiftHistoryAsync(DateTime? from, DateTime? to)
     {
-        var query = _unitOfWork.GetRepository<Shift>().Query()
-            .AsNoTracking()
-            .AsQueryable();
-
-        if (from.HasValue) query = query.Where(s => s.StartTime >= from.Value.Date);
-        if (to.HasValue)
-        {
-            var endOfDay = to.Value.Date.AddDays(1).AddTicks(-1);
-            query = query.Where(s => s.StartTime <= endOfDay);
-        }
-
-        var shifts = await query.OrderByDescending(s => s.StartTime).ToListAsync();
+        var shifts = await _shiftRepository.GetHistoryAsync(from, to);
         return await MapWithUserNamesAsync(shifts);
     }
 
     public async Task<ShiftViewModel?> GetByIdAsync(int id)
     {
-        var shift = await _unitOfWork.GetRepository<Shift>().Query()
-            .AsNoTracking()
-            .FirstOrDefaultAsync(s => s.Id == id);
+        var shift = await _unitOfWork.GetRepository<Shift>().GetByIdAsync(id);
         if (shift == null) return null;
 
         var vm = _mapper.Map<ShiftViewModel>(shift);
-        vm.UserName = await _unitOfWork.Context.Set<ApplicationUser>()
-            .AsNoTracking()
-            .Where(u => u.Id == shift.UserId)
-            .Select(u => u.FullName)
-            .FirstOrDefaultAsync() ?? "Unknown";
+        vm.UserName = await _applicationUserRepository.GetFullNameByIdAsync(shift.UserId) ?? "Unknown";
 
         return vm;
     }
 
     private async Task<Shift?> GetActiveShiftEntityAsync()
     {
-        return await _unitOfWork.GetRepository<Shift>().Query()
-            .FirstOrDefaultAsync(s => s.UserId == _currentUser.UserId && s.IsActive);
+        return await _shiftRepository.GetActiveShiftAsync(_currentUser.UserId);
     }
 
     private async Task<(decimal CashSales, decimal CreditSales, decimal TotalPurchases, decimal TotalPaymentsReceived)> CalculateShiftTotalsAsync(string userId, DateTime startTime, DateTime endTime)
     {
-
-        var salesQuery = _unitOfWork.GetRepository<SalesInvoice>().Query()
-            .AsNoTracking()
-            .Where(s => s.CreatedByUserId == userId && s.CreatedAt >= startTime && s.CreatedAt <= endTime);
-
-        var cashSales = await salesQuery
-            .Where(s => s.SaleType == SaleType.Cash)
-            .SumAsync(s => s.TotalAmount);
-
-        var creditSales = await salesQuery
-            .Where(s => s.SaleType == SaleType.Credit)
-            .SumAsync(s => s.TotalAmount);
-
-        var creditSaleIds = await salesQuery
-            .Where(s => s.SaleType == SaleType.Credit)
-            .Select(s => s.Id)
-            .ToListAsync();
-
-        var creditInvoicePayments = creditSaleIds.Count == 0
-            ? 0
-            : await _unitOfWork.GetRepository<Payment>().Query()
-                .AsNoTracking()
-                .Where(p => p.SalesInvoiceId.HasValue
-                    && creditSaleIds.Contains(p.SalesInvoiceId.Value)
-                    && p.CreatedAt >= startTime
-                    && p.CreatedAt <= endTime)
-                .SumAsync(p => p.AmountPaid);
-        
-        var creditInvoicePaidAmount = await salesQuery
-            .Where(s => s.SaleType == SaleType.Credit)
-            .SumAsync(s => s.PaidAmount);
-
-        var initialCreditPayments = Math.Max(0, creditInvoicePaidAmount - creditInvoicePayments);
-        
-        var payments = await _unitOfWork.GetRepository<Payment>().Query()
-            .AsNoTracking()
-            .Where(p => p.RecordedByUserId == userId && p.CreatedAt >= startTime && p.CreatedAt <= endTime)
-            .SumAsync(p => p.AmountPaid);
-
-        var totalPaymentsReceived = payments + initialCreditPayments;
-
-        var purchases = await _unitOfWork.GetRepository<PurchaseInvoice>().Query()
-            .AsNoTracking()
-            .Where(p => p.CreatedByUserId == userId && p.CreatedAt >= startTime && p.CreatedAt <= endTime)
-            .SumAsync(p => p.TotalAmount);
-
-        return (cashSales, creditSales, purchases, totalPaymentsReceived);
+        var totals = await _salesInvoiceRepository.GetShiftTotalsAsync(userId, startTime, endTime);
+        return (totals.CashSales, totals.CreditSales, totals.TotalPurchases, totals.TotalPaymentsReceived);
     }
 
-    private async Task<IReadOnlyList<ShiftViewModel>> MapWithUserNamesAsync(List<Shift> shifts)
+    private async Task<IReadOnlyList<ShiftViewModel>> MapWithUserNamesAsync(IReadOnlyList<Shift> shifts)
     {
         var viewModels = _mapper.Map<List<ShiftViewModel>>(shifts);
 
         var userIds = shifts.Select(s => s.UserId).Distinct().ToList();
         if (userIds.Any())
         {
-            var users = await _unitOfWork.Context.Set<ApplicationUser>()
-                .AsNoTracking()
-                .Where(u => userIds.Contains(u.Id))
-                .ToDictionaryAsync(u => u.Id, u => u.FullName);
+            var users = await _applicationUserRepository.GetFullNamesByIdsAsync(userIds);
 
             for (int i = 0; i < shifts.Count; i++)
             {

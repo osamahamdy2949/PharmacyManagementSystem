@@ -1,6 +1,5 @@
 using AutoMapper;
 using FluentValidation;
-using Microsoft.EntityFrameworkCore;
 using PharmacyManagement.BLL.Common;
 using PharmacyManagement.BLL.Services.Interfaces;
 using PharmacyManagement.BLL.Validators;
@@ -14,17 +13,32 @@ namespace PharmacyManagement.BLL.Services.Classes;
 public class PaymentService : IPaymentService
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IPaymentRepository _paymentRepository;
+    private readonly ISalesInvoiceRepository _salesInvoiceRepository;
+    private readonly IShiftRepository _shiftRepository;
+    private readonly IApplicationUserRepository _applicationUserRepository;
+    private readonly IDataTransactionManager _transactionManager;
     private readonly IMapper _mapper;
     private readonly IValidator<RecordPaymentViewModel> _validator;
     private readonly ICurrentUserService _currentUser;
 
     public PaymentService(
         IUnitOfWork unitOfWork,
+        IPaymentRepository paymentRepository,
+        ISalesInvoiceRepository salesInvoiceRepository,
+        IShiftRepository shiftRepository,
+        IApplicationUserRepository applicationUserRepository,
+        IDataTransactionManager transactionManager,
         IMapper mapper,
         IValidator<RecordPaymentViewModel> validator,
         ICurrentUserService currentUser)
     {
         _unitOfWork = unitOfWork;
+        _paymentRepository = paymentRepository;
+        _salesInvoiceRepository = salesInvoiceRepository;
+        _shiftRepository = shiftRepository;
+        _applicationUserRepository = applicationUserRepository;
+        _transactionManager = transactionManager;
         _mapper = mapper;
         _validator = validator;
         _currentUser = currentUser;
@@ -35,13 +49,11 @@ public class PaymentService : IPaymentService
         var validation = await ValidationHelper.ValidateAsync(_validator, model);
         if (validation != null) return validation;
 
-        var activeShiftExists = await _unitOfWork.GetRepository<Shift>().Query()
-            .AsNoTracking()
-            .AnyAsync(s => s.UserId == _currentUser.UserId && s.IsActive);
+        var activeShiftExists = await _shiftRepository.HasActiveShiftAsync(_currentUser.UserId);
         if (!activeShiftExists)
             return ServiceResult.Fail("You must start a shift before recording payments.");
 
-        await using var transaction = await _unitOfWork.Context.Database.BeginTransactionAsync();
+        await using var transaction = await _transactionManager.BeginTransactionAsync();
         try
         {
             var customer = await _unitOfWork.GetRepository<Customer>().GetByIdAsync(model.CustomerId, tracking: true);
@@ -93,10 +105,7 @@ public class PaymentService : IPaymentService
             // If no specific invoice is specified, we need to distribute the payment across oldest unpaid invoices
             else
             {
-                var unpaidInvoices = await _unitOfWork.GetRepository<SalesInvoice>().Query()
-                    .Where(s => s.CustomerId == model.CustomerId && s.RemainingAmount > 0)
-                    .OrderBy(s => s.InvoiceDate)
-                    .ToListAsync();
+                var unpaidInvoices = await _salesInvoiceRepository.GetUnpaidInvoicesByCustomerAsync(model.CustomerId);
 
                 var amountToDistribute = model.AmountPaid;
                 foreach (var inv in unpaidInvoices)
@@ -126,57 +135,27 @@ public class PaymentService : IPaymentService
 
     public async Task<IReadOnlyList<PaymentViewModel>> GetPaymentHistoryAsync(PaymentHistoryFilterViewModel filter)
     {
-        var query = _unitOfWork.GetRepository<Payment>().Query()
-            .AsNoTracking()
-            .Include(p => p.Customer)
-            .AsQueryable();
-
-        if (filter.CustomerId.HasValue)
-            query = query.Where(p => p.CustomerId == filter.CustomerId.Value);
-
-        if (filter.FromDate.HasValue)
-            query = query.Where(p => p.PaymentDate >= filter.FromDate.Value.Date);
-
-        if (filter.ToDate.HasValue)
-        {
-            var endOfDay = filter.ToDate.Value.Date.AddDays(1).AddTicks(-1);
-            query = query.Where(p => p.PaymentDate <= endOfDay);
-        }
-
-        var payments = await query.OrderByDescending(p => p.PaymentDate).ToListAsync();
+        var payments = await _paymentRepository.GetHistoryAsync(filter.CustomerId, filter.FromDate, filter.ToDate);
         return await MapWithUserNamesAsync(payments);
     }
 
     public async Task<IReadOnlyList<PaymentViewModel>> GetPaymentsByCustomerAsync(int customerId)
     {
-        var payments = await _unitOfWork.GetRepository<Payment>().Query()
-            .AsNoTracking()
-            .Include(p => p.Customer)
-            .Where(p => p.CustomerId == customerId)
-            .OrderByDescending(p => p.PaymentDate)
-            .ToListAsync();
+        var payments = await _paymentRepository.GetByCustomerAsync(customerId);
             
         return await MapWithUserNamesAsync(payments);
     }
 
     public async Task<IReadOnlyList<PaymentViewModel>> GetPaymentsByInvoiceAsync(int invoiceId)
     {
-        var payments = await _unitOfWork.GetRepository<Payment>().Query()
-            .AsNoTracking()
-            .Include(p => p.Customer)
-            .Where(p => p.SalesInvoiceId == invoiceId)
-            .OrderByDescending(p => p.PaymentDate)
-            .ToListAsync();
+        var payments = await _paymentRepository.GetByInvoiceAsync(invoiceId);
             
         return await MapWithUserNamesAsync(payments);
     }
 
     public async Task<PaymentViewModel?> GetByIdAsync(int id)
     {
-        var payment = await _unitOfWork.GetRepository<Payment>().Query()
-            .AsNoTracking()
-            .Include(p => p.Customer)
-            .FirstOrDefaultAsync(p => p.Id == id);
+        var payment = await _paymentRepository.GetByIdWithCustomerAsync(id);
 
         if (payment == null) return null;
 
@@ -184,27 +163,20 @@ public class PaymentService : IPaymentService
         
         if (payment.RecordedByUserId != null)
         {
-            vm.RecordedByUserName = await _unitOfWork.Context.Set<ApplicationUser>()
-                .AsNoTracking()
-                .Where(u => u.Id == payment.RecordedByUserId)
-                .Select(u => u.FullName)
-                .FirstOrDefaultAsync() ?? "System";
+            vm.RecordedByUserName = await _applicationUserRepository.GetFullNameByIdAsync(payment.RecordedByUserId) ?? "System";
         }
         
         return vm;
     }
     
-    private async Task<IReadOnlyList<PaymentViewModel>> MapWithUserNamesAsync(List<Payment> payments)
+    private async Task<IReadOnlyList<PaymentViewModel>> MapWithUserNamesAsync(IReadOnlyList<Payment> payments)
     {
         var viewModels = _mapper.Map<List<PaymentViewModel>>(payments);
 
-        var userIds = payments.Select(p => p.RecordedByUserId).Where(id => id != null).Distinct().ToList();
+        var userIds = payments.Select(p => p.RecordedByUserId).Where(id => id != null).Select(id => id!).Distinct().ToList();
         if (userIds.Any())
         {
-            var users = await _unitOfWork.Context.Set<ApplicationUser>()
-                .AsNoTracking()
-                .Where(u => userIds.Contains(u.Id))
-                .ToDictionaryAsync(u => u.Id, u => u.FullName);
+            var users = await _applicationUserRepository.GetFullNamesByIdsAsync(userIds);
 
             for (int i = 0; i < payments.Count; i++)
             {

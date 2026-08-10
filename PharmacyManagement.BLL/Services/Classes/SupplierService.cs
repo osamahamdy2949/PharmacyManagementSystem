@@ -1,6 +1,5 @@
 using AutoMapper;
 using FluentValidation;
-using Microsoft.EntityFrameworkCore;
 using PharmacyManagement.BLL.Common;
 using PharmacyManagement.BLL.Services.Interfaces;
 using PharmacyManagement.BLL.Validators;
@@ -13,12 +12,18 @@ namespace PharmacyManagement.BLL.Services.Classes;
 public class SupplierService : ISupplierService
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ISupplierRepository _supplierRepository;
     private readonly IMapper _mapper;
     private readonly IValidator<SupplierViewModel> _validator;
 
-    public SupplierService(IUnitOfWork unitOfWork, IMapper mapper, IValidator<SupplierViewModel> validator)
+    public SupplierService(
+        IUnitOfWork unitOfWork,
+        ISupplierRepository supplierRepository,
+        IMapper mapper,
+        IValidator<SupplierViewModel> validator)
     {
         _unitOfWork = unitOfWork;
+        _supplierRepository = supplierRepository;
         _mapper = mapper;
         _validator = validator;
     }
@@ -60,12 +65,10 @@ public class SupplierService : ISupplierService
         var entity = await _unitOfWork.GetRepository<Supplier>().GetByIdAsync(model.Id);
         if (entity == null) return ServiceResult.Fail("Supplier not found.");
 
-        var emailExists = await _unitOfWork.GetRepository<Supplier>().Query()
-            .AnyAsync(s => s.Email == model.Email && s.Id != model.Id);
+        var emailExists = await _supplierRepository.EmailExistsForOtherSupplierAsync(model.Email, model.Id);
         if (emailExists) return ServiceResult.Fail("Email already exists.");
 
-        var phoneExists = await _unitOfWork.GetRepository<Supplier>().Query()
-            .AnyAsync(s => s.Phone == model.Phone && s.Id != model.Id);
+        var phoneExists = await _supplierRepository.PhoneExistsForOtherSupplierAsync(model.Phone, model.Id);
         if (phoneExists) return ServiceResult.Fail("Phone number already exists.");
 
         entity.Email = model.Email;
@@ -82,7 +85,7 @@ public class SupplierService : ISupplierService
         var entity = await _unitOfWork.GetRepository<Supplier>().GetByIdAsync(id);
         if (entity == null) return ServiceResult.Fail("Supplier not found.");
 
-        _unitOfWork.GetRepository<Supplier>().Remove(entity);
+        _unitOfWork.GetRepository<Supplier>().Delete(entity);
         await _unitOfWork.SaveChangesAsync();
         return ServiceResult.Ok();
     }

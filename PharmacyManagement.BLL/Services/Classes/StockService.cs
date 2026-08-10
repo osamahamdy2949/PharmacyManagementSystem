@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using PharmacyManagement.BLL.Common;
 using PharmacyManagement.BLL.Services.Interfaces;
 using PharmacyManagement.DAL.Data.Entities;
@@ -10,49 +9,40 @@ namespace PharmacyManagement.BLL.Services.Classes;
 public class StockService : IStockService
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IStockRepository _stockRepository;
+    private readonly IDataTransactionManager _transactionManager;
     private readonly ICurrentUserService _currentUser;
 
-    public StockService(IUnitOfWork unitOfWork, ICurrentUserService currentUser)
+    public StockService(IUnitOfWork unitOfWork, IStockRepository stockRepository, IDataTransactionManager transactionManager, ICurrentUserService currentUser)
     {
         _unitOfWork = unitOfWork;
+        _stockRepository = stockRepository;
+        _transactionManager = transactionManager;
         _currentUser = currentUser;
     }
-
-    private static IQueryable<MedicineBatch> ActiveSaleableBatches(IQueryable<MedicineBatch> query, DateTime today) =>
-        query.Where(b => b.IsActive && b.ExpiryDate > today && b.CurrentQuantity > 0);
 
     public async Task<int> GetAvailableStockAsync(int medicineId, CancellationToken ct = default)
     {
         var today = DateTime.Today;
-        return await ActiveSaleableBatches(_unitOfWork.GetRepository<MedicineBatch>().Query(), today)
-            .Where(b => b.MedicineId == medicineId)
-            .SumAsync(b => b.CurrentQuantity, ct);
+        return await _stockRepository.GetAvailableStockAsync(medicineId, today, ct);
     }
 
     public async Task<int> GetAvailableStockAsync(int medicineId, string dose, CancellationToken ct = default)
     {
         var today = DateTime.Today;
-        return await ActiveSaleableBatches(_unitOfWork.GetRepository<MedicineBatch>().Query(), today)
-            .Where(b => b.MedicineId == medicineId && b.Dose == dose)
-            .SumAsync(b => b.CurrentQuantity, ct);
+        return await _stockRepository.GetAvailableStockAsync(medicineId, dose, today, ct);
     }
 
     public async Task<IReadOnlyList<MedicineBatch>> GetBatchesForSaleAsync(int medicineId, CancellationToken ct = default)
     {
         var today = DateTime.Today;
-        return await ActiveSaleableBatches(_unitOfWork.GetRepository<MedicineBatch>().Query(), today)
-            .Where(b => b.MedicineId == medicineId)
-            .OrderBy(b => b.ExpiryDate)
-            .ToListAsync(ct);
+        return await _stockRepository.GetBatchesForSaleAsync(medicineId, today, ct);
     }
 
     public async Task<IReadOnlyList<MedicineBatch>> GetBatchesForSaleAsync(int medicineId, string dose, CancellationToken ct = default)
     {
         var today = DateTime.Today;
-        return await ActiveSaleableBatches(_unitOfWork.GetRepository<MedicineBatch>().Query(), today)
-            .Where(b => b.MedicineId == medicineId && b.Dose == dose)
-            .OrderBy(b => b.ExpiryDate)
-            .ToListAsync(ct);
+        return await _stockRepository.GetBatchesForSaleAsync(medicineId, dose, today, ct);
     }
 
     public async Task<IReadOnlyList<BatchDeduction>> DeductStockFefoAsync(
@@ -103,7 +93,7 @@ public class StockService : IStockService
         {
             await _unitOfWork.SaveChangesAsync(ct);
         }
-        catch (DbUpdateConcurrencyException)
+        catch (Exception ex) when (_transactionManager.IsConcurrencyException(ex))
         {
             throw new InvalidOperationException("Stock was updated by another user. Please retry.");
         }
@@ -136,7 +126,7 @@ public class StockService : IStockService
         {
             await _unitOfWork.SaveChangesAsync(ct);
         }
-        catch (DbUpdateConcurrencyException)
+        catch (Exception ex) when (_transactionManager.IsConcurrencyException(ex))
         {
             throw new InvalidOperationException("Stock was updated by another user. Please retry.");
         }
@@ -160,7 +150,7 @@ public class StockService : IStockService
         {
             await _unitOfWork.SaveChangesAsync(ct);
         }
-        catch (DbUpdateConcurrencyException)
+        catch (Exception ex) when (_transactionManager.IsConcurrencyException(ex))
         {
             throw new InvalidOperationException("Stock was updated by another user. Please retry.");
         }

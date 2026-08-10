@@ -1,5 +1,4 @@
 using AutoMapper;
-using Microsoft.EntityFrameworkCore;
 using PharmacyManagement.BLL.Common;
 using PharmacyManagement.BLL.Services.Interfaces;
 using PharmacyManagement.BLL.ViewModels.PosViewModels;
@@ -15,6 +14,11 @@ public class SalesService : ISalesService
     private const string UnknownUserDisplayName = "System / Unknown";
 
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ISalesInvoiceRepository _salesInvoiceRepository;
+    private readonly IMedicineRepository _medicineRepository;
+    private readonly IShiftRepository _shiftRepository;
+    private readonly IApplicationUserRepository _applicationUserRepository;
+    private readonly IDataTransactionManager _transactionManager;
     private readonly IMapper _mapper;
     private readonly IStockService _stockService;
     private readonly ICustomerService _customerService;
@@ -22,12 +26,22 @@ public class SalesService : ISalesService
 
     public SalesService(
         IUnitOfWork unitOfWork,
+        ISalesInvoiceRepository salesInvoiceRepository,
+        IMedicineRepository medicineRepository,
+        IShiftRepository shiftRepository,
+        IApplicationUserRepository applicationUserRepository,
+        IDataTransactionManager transactionManager,
         IMapper mapper,
         IStockService stockService,
         ICustomerService customerService,
         ICurrentUserService currentUser)
     {
         _unitOfWork = unitOfWork;
+        _salesInvoiceRepository = salesInvoiceRepository;
+        _medicineRepository = medicineRepository;
+        _shiftRepository = shiftRepository;
+        _applicationUserRepository = applicationUserRepository;
+        _transactionManager = transactionManager;
         _mapper = mapper;
         _stockService = stockService;
         _customerService = customerService;
@@ -36,13 +50,7 @@ public class SalesService : ISalesService
 
     public async Task<IReadOnlyList<SalesInvoiceViewModel>> GetAllAsync()
     {
-        var items = await _unitOfWork.GetRepository<SalesInvoice>().Query()
-            .AsNoTracking()
-            .Include(s => s.Customer)
-            .Include(s => s.Items).ThenInclude(i => i.Medicine)
-            .Include(s => s.Items).ThenInclude(i => i.MedicineBatch)
-            .OrderByDescending(s => s.InvoiceDate)
-            .ToListAsync();
+        var items = await _salesInvoiceRepository.GetAllWithDetailsAsync();
 
         var viewModels = _mapper.Map<List<SalesInvoiceViewModel>>(items);
         await AddCreatedByUserNamesAsync(items, viewModels);
@@ -51,39 +59,14 @@ public class SalesService : ISalesService
 
     public async Task<SalesInvoiceViewModel?> GetByIdAsync(int id)
     {
-        var item = await _unitOfWork.GetRepository<SalesInvoice>().Query()
-            .AsNoTracking()
-            .Include(s => s.Customer)
-            .Include(s => s.Items).ThenInclude(i => i.Medicine)
-            .Include(s => s.Items).ThenInclude(i => i.MedicineBatch)
-            .FirstOrDefaultAsync(s => s.Id == id);
+        var item = await _salesInvoiceRepository.GetByIdWithDetailsAsync(id);
         return item == null ? null : _mapper.Map<SalesInvoiceViewModel>(item);
     }
 
     public async Task<IReadOnlyList<MedicineSaleLookupViewModel>> SearchMedicinesForSaleAsync(string? query)
     {
         var today = DateTime.Today;
-        var batchQuery = _unitOfWork.GetRepository<MedicineBatch>().Query()
-            .AsNoTracking()
-            .Include(b => b.Medicine)
-            .Where(b => b.IsActive && b.ExpiryDate > today && b.CurrentQuantity > 0);
-
-        if (!string.IsNullOrWhiteSpace(query))
-        {
-            var term = query.Trim().ToUpper();
-            batchQuery = batchQuery.Where(b =>
-                b.Medicine.TradeName.ToUpper().Contains(term) ||
-                b.Medicine.ScientificName.ToUpper().Contains(term) ||
-                b.Dose.ToUpper().Contains(term) ||
-                (b.Barcode != null && b.Barcode.ToUpper() == term));
-        }
-
-        var batches = await batchQuery
-            .OrderBy(b => b.Medicine.TradeName)
-            .ThenBy(b => b.Dose)
-            .ThenBy(b => b.ExpiryDate)
-            .Take(100)
-            .ToListAsync();
+        var batches = await _salesInvoiceRepository.SearchMedicineBatchesForSaleAsync(query, today, 100);
 
         var grouped = batches
             .GroupBy(b => new { b.MedicineId, b.Dose })
@@ -124,9 +107,7 @@ public class SalesService : ISalesService
 
     public async Task<ServiceResult<PosCheckoutResultViewModel>> CheckoutPosAsync(PosCheckoutViewModel model)
     {
-        var activeShiftExists = await _unitOfWork.GetRepository<Shift>().Query()
-            .AsNoTracking()
-            .AnyAsync(s => s.UserId == _currentUser.UserId && s.IsActive);
+        var activeShiftExists = await _shiftRepository.HasActiveShiftAsync(_currentUser.UserId);
         if (!activeShiftExists)
             return ServiceResult<PosCheckoutResultViewModel>.Fail("You must start a shift before completing a sale.");
 
@@ -145,17 +126,14 @@ public class SalesService : ISalesService
 
             customerId = customerResult.Data;
         }
-        else if (!await _unitOfWork.GetRepository<Customer>().Query().AsNoTracking().AnyAsync(c => c.Id == customerId))
+        else if (!await _unitOfWork.GetRepository<Customer>().AnyAsync(c => c.Id == customerId))
         {
             return ServiceResult<PosCheckoutResultViewModel>.Fail("Customer does not exist.");
         }
 
         var cartLines = model.Items.Where(i => i.Quantity > 0).ToList();
         var medicineIds = cartLines.Select(i => i.MedicineId).Distinct().ToList();
-        var medicinesById = await _unitOfWork.GetRepository<Medicine>().Query()
-            .AsNoTracking()
-            .Where(m => medicineIds.Contains(m.Id))
-            .ToDictionaryAsync(m => m.Id);
+        var medicinesById = await _medicineRepository.GetByIdsAsync(medicineIds);
 
         foreach (var line in cartLines)
         {
@@ -172,7 +150,7 @@ public class SalesService : ISalesService
                     $"Cannot sell {line.Quantity} unit(s) of {medicine.TradeName}. Only {availableStock} in stock.");
         }
 
-        await using var transaction = await _unitOfWork.Context.Database.BeginTransactionAsync();
+        await using var transaction = await _transactionManager.BeginTransactionAsync();
         try
         {
             var invoiceLines = new List<SalesInvoiceItem>();
@@ -268,16 +246,14 @@ public class SalesService : ISalesService
         var userIds = invoices
             .Select(invoice => invoice.CreatedByUserId)
             .Where(id => id != null)
+            .Select(id => id!)
             .Distinct()
             .ToList();
 
         if (userIds.Count == 0)
             return;
 
-        var users = await _unitOfWork.Context.Set<ApplicationUser>()
-            .AsNoTracking()
-            .Where(user => userIds.Contains(user.Id))
-            .ToDictionaryAsync(user => user.Id, user => user.FullName);
+        var users = await _applicationUserRepository.GetFullNamesByIdsAsync(userIds);
 
         for (var i = 0; i < invoices.Count; i++)
         {

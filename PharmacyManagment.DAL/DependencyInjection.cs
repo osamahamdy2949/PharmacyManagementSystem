@@ -15,6 +15,23 @@ public static class DependencyInjection
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
+        services.AddScoped<ICustomerRepository, CustomerRepository>();
+        services.AddScoped<IApplicationUserRepository, ApplicationUserRepository>();
+        services.AddScoped<ISupplierRepository, SupplierRepository>();
+        services.AddScoped<IMedicineRepository, MedicineRepository>();
+        services.AddScoped<IMedicineBatchRepository, MedicineBatchRepository>();
+        services.AddScoped<ISearchRepository, SearchRepository>();
+        services.AddScoped<IStockRepository, StockRepository>();
+        services.AddScoped<ISalesInvoiceRepository, SalesInvoiceRepository>();
+        services.AddScoped<IPurchaseInvoiceRepository, PurchaseInvoiceRepository>();
+        services.AddScoped<IPaymentRepository, PaymentRepository>();
+        services.AddScoped<IShiftRepository, ShiftRepository>();
+        services.AddScoped<ISalesReturnRepository, SalesReturnRepository>();
+        services.AddScoped<IPurchaseReturnRepository, PurchaseReturnRepository>();
+        services.AddScoped<INotificationRepository, NotificationRepository>();
+        services.AddScoped<IDashboardRepository, DashboardRepository>();
+        services.AddScoped<IReportRepository, ReportRepository>();
+        services.AddScoped<IDataTransactionManager, DataTransactionManager>();
 
         return services;
     }

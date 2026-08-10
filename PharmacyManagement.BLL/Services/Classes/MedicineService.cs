@@ -1,6 +1,5 @@
 using AutoMapper;
 using FluentValidation;
-using Microsoft.EntityFrameworkCore;
 using PharmacyManagement.BLL.Common;
 using PharmacyManagement.BLL.Services.Interfaces;
 using PharmacyManagement.BLL.Validators;
@@ -17,17 +16,23 @@ namespace PharmacyManagement.BLL.Services.Classes;
 public class MedicineService : IMedicineService
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IMedicineRepository _medicineRepository;
+    private readonly ISearchRepository _searchRepository;
     private readonly IMapper _mapper;
     private readonly IValidator<MedicineViewModel> _createValidator;
     private readonly IValidator<MedicineViewModel> _editValidator;
 
     public MedicineService(
         IUnitOfWork unitOfWork,
+        IMedicineRepository medicineRepository,
+        ISearchRepository searchRepository,
         IMapper mapper,
         IValidator<MedicineViewModel> createValidator,
         MedicineEditViewModelValidator editValidator)
     {
         _unitOfWork = unitOfWork;
+        _medicineRepository = medicineRepository;
+        _searchRepository = searchRepository;
         _mapper = mapper;
         _createValidator = createValidator;
         _editValidator = editValidator;
@@ -35,19 +40,7 @@ public class MedicineService : IMedicineService
 
     public async Task<IReadOnlyList<MedicineViewModel>> GetAllAsync(string? search = null)
     {
-        IQueryable<Medicine> query = _unitOfWork.GetRepository<Medicine>().Query()
-            .AsNoTracking()
-            .Include(m => m.Category);
-
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            var term = search.Trim().ToLower();
-            query = query.Where(m =>
-                m.TradeName.ToLower().Contains(term) ||
-                m.ScientificName.ToLower().Contains(term));
-        }
-
-        var items = await query.OrderBy(m => m.TradeName).ToListAsync();
+        var items = await _medicineRepository.GetAllWithCategoryAsync(search);
         var vms = _mapper.Map<IReadOnlyList<MedicineViewModel>>(items);
         await PopulateStockInfoAsync(vms);
         return vms;
@@ -62,37 +55,14 @@ public class MedicineService : IMedicineService
 
         var term = query.Trim().ToLower();
 
-        var medicines = await _unitOfWork.GetRepository<Medicine>().Query()
-            .AsNoTracking()
-            .Include(m => m.Category)
-            .Where(m =>
-                m.SerialNumber.ToLower().Contains(term) ||
-                m.TradeName.ToLower().Contains(term) ||
-                m.ScientificName.ToLower().Contains(term) ||
-                m.Manufacturer.ToLower().Contains(term))
-            .Take(20)
-            .ToListAsync();
+        var medicines = await _medicineRepository.SearchWithCategoryAsync(term, 20);
 
         var medicineVms = _mapper.Map<IReadOnlyList<MedicineViewModel>>(medicines);
         await PopulateStockInfoAsync(medicineVms);
 
-        var categories = await _unitOfWork.GetRepository<Category>().Query()
-            .AsNoTracking()
-            .Where(c => c.Name.ToLower().Contains(term))
-            .Take(10)
-            .ToListAsync();
-
-        var suppliers = await _unitOfWork.GetRepository<Supplier>().Query()
-            .AsNoTracking()
-            .Where(s => s.Name.ToLower().Contains(term) || (s.Email != null && s.Email.ToLower().Contains(term)))
-            .Take(10)
-            .ToListAsync();
-
-        var customers = await _unitOfWork.GetRepository<Customer>().Query()
-            .AsNoTracking()
-            .Where(c => c.Name.ToLower().Contains(term) || (c.Phone != null && c.Phone.Contains(term)))
-            .Take(10)
-            .ToListAsync();
+        var categories = await _searchRepository.SearchCategoriesAsync(term, 10);
+        var suppliers = await _searchRepository.SearchSuppliersAsync(term, 10);
+        var customers = await _searchRepository.SearchCustomersAsync(term, 10);
 
         return new SearchResultsViewModel
         {
@@ -106,10 +76,7 @@ public class MedicineService : IMedicineService
 
     public async Task<MedicineViewModel?> GetByIdAsync(int id)
     {
-        var item = await _unitOfWork.GetRepository<Medicine>().Query()
-            .AsNoTracking()
-            .Include(m => m.Category)
-            .FirstOrDefaultAsync(m => m.Id == id);
+        var item = await _medicineRepository.GetByIdWithCategoryAsync(id);
         if (item == null) return null;
         var vm = _mapper.Map<MedicineViewModel>(item);
         await PopulateStockInfoAsync(new[] { vm });
@@ -141,15 +108,13 @@ public class MedicineService : IMedicineService
         var validation = await ValidationHelper.ValidateAsync(_editValidator, model);
         if (validation != null) return validation;
 
-        var entity = await _unitOfWork.GetRepository<Medicine>().Query()
-            .FirstOrDefaultAsync(m => m.Id == model.Id);
+        var entity = await _medicineRepository.GetTrackedByIdAsync(model.Id);
         if (entity == null) return ServiceResult.Fail("Medicine not found.");
 
         if (!await _unitOfWork.GetRepository<Category>().AnyAsync(c => c.Id == model.CategoryId))
             return ServiceResult.Fail("Category does not exist.");
 
-        if (await _unitOfWork.GetRepository<Medicine>().Query()
-            .AnyAsync(m => m.SerialNumber == model.SerialNumber && m.Id != model.Id))
+        if (await _medicineRepository.SerialNumberExistsForOtherMedicineAsync(model.SerialNumber, model.Id))
             return ServiceResult.Fail("Serial number already exists.");
 
         entity.SerialNumber = model.SerialNumber;
@@ -171,10 +136,10 @@ public class MedicineService : IMedicineService
         if (hasPurchases || hasSales)
             return ServiceResult.Fail("Cannot delete medicine linked to purchase or sales invoices.");
 
-        var entity = await _unitOfWork.GetRepository<Medicine>().Query().FirstOrDefaultAsync(m => m.Id == id);
+        var entity = await _medicineRepository.GetTrackedByIdAsync(id);
         if (entity == null) return ServiceResult.Fail("Medicine not found.");
 
-        _unitOfWork.GetRepository<Medicine>().Remove(entity);
+        _unitOfWork.GetRepository<Medicine>().Delete(entity);
         await _unitOfWork.SaveChangesAsync();
         return ServiceResult.Ok();
     }
@@ -189,21 +154,8 @@ public class MedicineService : IMedicineService
         var nearExpiry = today.AddDays(ValidationConstants.NearExpiryDays);
         var medicineIds = medicines.Select(m => m.Id).ToList();
 
-        var stockInfo = await _unitOfWork.GetRepository<MedicineBatch>().Query()
-            .AsNoTracking()
-            .Where(b =>
-                medicineIds.Contains(b.MedicineId) &&
-                b.IsActive &&
-                b.ExpiryDate > today &&
-                b.CurrentQuantity > 0)
-            .GroupBy(b => b.MedicineId)
-            .Select(g => new
-            {
-                MedicineId = g.Key,
-                QuantityInStock = g.Sum(b => b.CurrentQuantity),
-                IsNearExpiry = g.Any(b => b.ExpiryDate <= nearExpiry)
-            })
-            .ToDictionaryAsync(x => x.MedicineId);
+        var stockInfo = (await _medicineRepository.GetStockInfoAsync(medicineIds, today, nearExpiry))
+            .ToDictionary(x => x.MedicineId);
 
         foreach (var vm in medicines)
         {

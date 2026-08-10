@@ -11,6 +11,7 @@ using PharmacyManagement.BLL.ViewModels.ReportViewModels;
 using PharmacyManagement.BLL.ViewModels.SalesInvoiceViewModels;
 using PharmacyManagement.BLL.ViewModels.SupplierViewModels;
 using PharmacyManagement.DAL.Data.Entities;
+using PharmacyManagement.DAL.Repositories.Models;
 
 namespace PharmacyManagement.BLL.Mapping;
 
@@ -29,6 +30,7 @@ public class MappingProfile : Profile
         CreateMap<Supplier, SupplierViewModel>().ReverseMap();
         CreateMap<Customer, CustomerViewModel>().ReverseMap();
         CreateMap<Customer, CustomerProfileViewModel>().ReverseMap();
+        CreateMap<CustomerDebtHistoryData, CustomerDebtHistoryViewModel>();
         CreateMap<Shift, ShiftViewModel>().ReverseMap();
         CreateMap<Payment, PaymentViewModel>()
             .ForMember(d => d.CustomerName, o => o.MapFrom(s => s.Customer.Name))

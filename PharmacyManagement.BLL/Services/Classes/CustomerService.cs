@@ -1,12 +1,10 @@
 using AutoMapper;
 using FluentValidation;
-using Microsoft.EntityFrameworkCore;
 using PharmacyManagement.BLL.Common;
 using PharmacyManagement.BLL.Services.Interfaces;
 using PharmacyManagement.BLL.Validators;
 using PharmacyManagement.BLL.ViewModels.CustomerViewModels;
 using PharmacyManagement.DAL.Data.Entities;
-using PharmacyManagement.DAL.Data.Entities.Enums;
 using PharmacyManagement.DAL.Repositories.Interfaces;
 
 namespace PharmacyManagement.BLL.Services.Classes;
@@ -14,25 +12,28 @@ namespace PharmacyManagement.BLL.Services.Classes;
 public class CustomerService : ICustomerService
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ICustomerRepository _customerRepository;
     private readonly IMapper _mapper;
     private readonly IValidator<CustomerViewModel> _validator;
 
-    public CustomerService(IUnitOfWork unitOfWork, IMapper mapper, IValidator<CustomerViewModel> validator)
+    public CustomerService(IUnitOfWork unitOfWork, ICustomerRepository customerRepository,
+        IMapper mapper, IValidator<CustomerViewModel> validator)
     {
         _unitOfWork = unitOfWork;
+        _customerRepository = customerRepository;
         _mapper = mapper;
         _validator = validator;
     }
 
     public async Task<IReadOnlyList<CustomerViewModel>> GetAllAsync(CancellationToken ct)
     {
-        var items = await _unitOfWork.GetRepository<Customer>().GetAllAsync(ct: ct);
+        var items = await _customerRepository.GetAllAsync(ct: ct);
         return _mapper.Map<IReadOnlyList<CustomerViewModel>>(items);
     }
 
     public async Task<CustomerViewModel?> GetByIdAsync(int id, CancellationToken ct)
     {
-        var item = await _unitOfWork.GetRepository<Customer>().GetByIdAsync(id, ct: ct);
+        var item = await _customerRepository.GetByIdAsync(id, ct: ct);
         return item == null ? null : _mapper.Map<CustomerViewModel>(item);
     }
 
@@ -73,7 +74,7 @@ public class CustomerService : ICustomerService
         var entity = await _unitOfWork.GetRepository<Customer>().GetByIdAsync(id, ct:ct);
         if (entity == null) return ServiceResult.Fail("Customer not found.");
 
-        _unitOfWork.GetRepository<Customer>().Remove(entity);
+        _unitOfWork.GetRepository<Customer>().Delete(entity);
         await _unitOfWork.SaveChangesAsync(ct);
         return ServiceResult.Ok();
     }
@@ -88,11 +89,10 @@ public class CustomerService : ICustomerService
         
         var normalizedPhone = phone?.Trim();
         
-        var existing = await _unitOfWork.GetRepository<Customer>().Query()
-            .AsNoTracking()
+        var existing = await _unitOfWork.GetRepository<Customer>()
             .FirstOrDefaultAsync(c =>
                 c.Name.ToUpper() == normalizedName &&
-                (string.IsNullOrWhiteSpace(normalizedPhone) || c.Phone == normalizedPhone), ct);
+                (string.IsNullOrWhiteSpace(normalizedPhone) || c.Phone == normalizedPhone),ct:ct);
 
         if (existing != null)
             return ServiceResult<int>.Ok(existing.Id);
@@ -110,15 +110,7 @@ public class CustomerService : ICustomerService
 
     public async Task<CustomerProfileViewModel?> GetCustomerProfileAsync(int id, CancellationToken ct)
     {
-        var item = await _unitOfWork.GetRepository<Customer>().Query()
-            .AsNoTracking()
-            .Where(c => c.Id == id)
-            .Select(c => new
-            {
-                Customer = c,
-                TotalInvoices = c.SalesInvoices.Count
-            })
-            .FirstOrDefaultAsync(ct);
+        var item = await _customerRepository.GetCustomerProfileAsync(id, ct);
 
         if (item == null)
             return null;
@@ -130,21 +122,7 @@ public class CustomerService : ICustomerService
 
     public async Task<IReadOnlyList<CustomerDebtHistoryViewModel>> GetCustomerDebtHistoryAsync(int id, CancellationToken ct)
     {
-        var invoices = await _unitOfWork.GetRepository<SalesInvoice>().Query()
-            .AsNoTracking()
-            .Where(s => s.CustomerId == id && s.SaleType == SaleType.Credit)
-            .OrderByDescending(s => s.InvoiceDate)
-            .Select(s => new CustomerDebtHistoryViewModel
-            {
-                InvoiceId = s.Id,
-                InvoiceDate = s.InvoiceDate,
-                TotalAmount = s.TotalAmount,
-                PaidAmount = s.PaidAmount,
-                RemainingAmount = s.RemainingAmount,
-                PaymentStatus = s.PaymentStatus.ToString()
-            })
-            .ToListAsync(ct);
-
-        return invoices;
+        var invoices = await _customerRepository.GetCustomerDebtHistoryAsync(id, ct);
+        return _mapper.Map<IReadOnlyList<CustomerDebtHistoryViewModel>>(invoices);
     }
 }

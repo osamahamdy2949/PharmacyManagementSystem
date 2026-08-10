@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using PharmacyManagement.BLL.Common;
 using PharmacyManagement.BLL.Services.Interfaces;
 using PharmacyManagement.BLL.ViewModels.NotificationViewModels;
@@ -11,17 +10,19 @@ namespace PharmacyManagement.BLL.Services.Classes;
 public class NotificationService : INotificationService
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly INotificationRepository _notificationRepository;
 
-    public NotificationService(IUnitOfWork unitOfWork) => _unitOfWork = unitOfWork;
+    public NotificationService(IUnitOfWork unitOfWork, INotificationRepository notificationRepository)
+    {
+        _unitOfWork = unitOfWork;
+        _notificationRepository = notificationRepository;
+    }
 
     public async Task<int> GetUnreadCountAsync(string? userId = null) =>
-        await _unitOfWork.GetRepository<Notification>().Query()
-            .CountAsync(n => !n.IsRead && (userId == null || n.UserId == null || n.UserId == userId));
+        await _notificationRepository.GetUnreadCountAsync(userId);
 
     public async Task<IReadOnlyList<NotificationViewModel>> GetRecentAsync(int count = 20) =>
-        await _unitOfWork.GetRepository<Notification>().Query()
-            .OrderByDescending(n => n.CreatedAt)
-            .Take(count)
+        (await _notificationRepository.GetRecentAsync(count))
             .Select(n => new NotificationViewModel
             {
                 Id = n.Id,
@@ -29,27 +30,19 @@ public class NotificationService : INotificationService
                 Message = n.Message,
                 IsRead = n.IsRead,
                 CreatedAt = n.CreatedAt
-            }).ToListAsync();
+            }).ToList();
 
     public async Task GenerateStockAlertsAsync()
     {
         var today = DateTime.Today;
         var nearExpiry = today.AddDays(ValidationConstants.NearExpiryDays);
 
-        var lowStock = await _unitOfWork.GetRepository<Medicine>().Query()
-            .Where(m => m.MedicineBatches.Sum(b => (b.ExpiryDate > today && b.CurrentQuantity > 0) ? b.CurrentQuantity : 0) < m.MinStockLevel)
-            .Select(m => m.TradeName)
-            .ToListAsync();
+        var lowStock = await _notificationRepository.GetLowStockMedicineNamesAsync(today);
 
         foreach (var name in lowStock)
             await AddIfNotExistsAsync(NotificationType.LowStock, $"Low stock alert: {name}");
 
-        var nearExpiryMeds = await _unitOfWork.GetRepository<MedicineBatch>().Query()
-            .Include(b => b.Medicine)
-            .Where(b => b.ExpiryDate >= today && b.ExpiryDate <= nearExpiry && b.CurrentQuantity > 0)
-            .Select(b => b.Medicine.TradeName)
-            .Distinct()
-            .ToListAsync();
+        var nearExpiryMeds = await _notificationRepository.GetNearExpiryMedicineNamesAsync(today, nearExpiry);
 
         foreach (var name in nearExpiryMeds)
             await AddIfNotExistsAsync(NotificationType.NearExpiry, $"Near expiry alert: {name}");

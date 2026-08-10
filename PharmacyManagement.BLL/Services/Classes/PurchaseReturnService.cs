@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using PharmacyManagement.BLL.Common;
 using PharmacyManagement.BLL.Services.Interfaces;
 using PharmacyManagement.BLL.ViewModels.PurchaseReturnViewModels;
@@ -10,22 +9,32 @@ namespace PharmacyManagement.BLL.Services.Classes;
 public class PurchaseReturnService : IPurchaseReturnService
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IPurchaseReturnRepository _purchaseReturnRepository;
+    private readonly IStockRepository _stockRepository;
+    private readonly IDataTransactionManager _transactionManager;
     private readonly IStockService _stockService;
     private readonly ICurrentUserService _currentUser;
 
-    public PurchaseReturnService(IUnitOfWork unitOfWork, IStockService stockService, ICurrentUserService currentUser)
+    public PurchaseReturnService(
+        IUnitOfWork unitOfWork,
+        IPurchaseReturnRepository purchaseReturnRepository,
+        IStockRepository stockRepository,
+        IDataTransactionManager transactionManager,
+        IStockService stockService,
+        ICurrentUserService currentUser)
     {
         _unitOfWork = unitOfWork;
+        _purchaseReturnRepository = purchaseReturnRepository;
+        _stockRepository = stockRepository;
+        _transactionManager = transactionManager;
         _stockService = stockService;
         _currentUser = currentUser;
     }
 
     public async Task<IReadOnlyList<PurchaseReturnListItemViewModel>> GetAllAsync()
     {
-        return await _unitOfWork.GetRepository<PurchaseReturn>().Query()
-            .Include(r => r.Supplier)
-            .OrderByDescending(r => r.ReturnDate)
-            .Select(r => new PurchaseReturnListItemViewModel
+        var items = await _purchaseReturnRepository.GetAllWithSupplierAsync();
+        return items.Select(r => new PurchaseReturnListItemViewModel
             {
                 Id = r.Id,
                 PurchaseInvoiceId = r.PurchaseInvoiceId,
@@ -33,16 +42,12 @@ public class PurchaseReturnService : IPurchaseReturnService
                 ReturnDate = r.ReturnDate,
                 Reason = r.Reason,
                 TotalAmount = r.TotalAmount
-            }).ToListAsync();
+            }).ToList();
     }
 
     public async Task<PurchaseReturnViewModel?> GetByIdAsync(int id)
     {
-        var item = await _unitOfWork.GetRepository<PurchaseReturn>().Query()
-            .Include(r => r.Supplier)
-            .Include(r => r.Items).ThenInclude(i => i.Medicine)
-            .Include(r => r.Items).ThenInclude(i => i.MedicineBatch)
-            .FirstOrDefaultAsync(r => r.Id == id);
+        var item = await _purchaseReturnRepository.GetByIdWithDetailsAsync(id);
 
         if (item == null) return null;
 
@@ -69,19 +74,14 @@ public class PurchaseReturnService : IPurchaseReturnService
 
     public async Task<CreatePurchaseReturnViewModel?> GetCreateModelFromInvoiceAsync(int invoiceId)
     {
-        var invoice = await _unitOfWork.GetRepository<PurchaseInvoice>().Query()
-            .Include(p => p.Items).ThenInclude(i => i.Medicine)
-            .Include(p => p.Items).ThenInclude(i => i.MedicineBatch)
-            .FirstOrDefaultAsync(p => p.Id == invoiceId);
+        var invoice = await _purchaseReturnRepository.GetInvoiceForCreateModelAsync(invoiceId);
 
         if (invoice == null) return null;
 
         var items = new List<PurchaseReturnItemViewModel>();
         foreach (var i in invoice.Items.Where(i => i.MedicineBatchId.HasValue))
         {
-            var maxBoxes = await _unitOfWork.GetRepository<MedicineBatch>().Query()
-                .Where(b => b.MedicineId == i.MedicineId && b.BatchNumber == i.BatchNumber && b.CurrentQuantity > 0)
-                .CountAsync();
+            var maxBoxes = await _purchaseReturnRepository.CountAvailableBatchBoxesAsync(i.MedicineId, i.BatchNumber);
 
             items.Add(new PurchaseReturnItemViewModel
             {
@@ -104,9 +104,7 @@ public class PurchaseReturnService : IPurchaseReturnService
 
     public async Task<ServiceResult<int>> CreateAsync(CreatePurchaseReturnViewModel model)
     {
-        var invoice = await _unitOfWork.GetRepository<PurchaseInvoice>().Query()
-            .Include(p => p.Items)
-            .FirstOrDefaultAsync(p => p.Id == model.PurchaseInvoiceId);
+        var invoice = await _purchaseReturnRepository.GetInvoiceWithItemsAsync(model.PurchaseInvoiceId);
 
         if (invoice == null)
             return ServiceResult<int>.Fail("Purchase invoice not found.");
@@ -136,7 +134,7 @@ public class PurchaseReturnService : IPurchaseReturnService
             Items = returnItems
         };
 
-        await using var transaction = await _unitOfWork.Context.Database.BeginTransactionAsync();
+        await using var transaction = await _transactionManager.BeginTransactionAsync();
         try
         {
             _unitOfWork.GetRepository<PurchaseReturn>().Add(purchaseReturn);
@@ -147,17 +145,17 @@ public class PurchaseReturnService : IPurchaseReturnService
                 var originalBatch = await _unitOfWork.GetRepository<MedicineBatch>().GetByIdAsync(line.MedicineBatchId);
                 if (originalBatch == null) continue;
 
-                var clonesToReturn = await _unitOfWork.GetRepository<MedicineBatch>().Query()
-                    .Where(b => b.MedicineId == line.MedicineId && b.BatchNumber == originalBatch.BatchNumber && b.CurrentQuantity > 0)
-                    .Take(line.Quantity)
-                    .ToListAsync();
+                var clonesToReturn = await _stockRepository.GetReturnableBatchClonesAsync(
+                    line.MedicineId,
+                    originalBatch.BatchNumber,
+                    line.Quantity);
 
                 if (clonesToReturn.Count < line.Quantity)
                     throw new InvalidOperationException($"Insufficient stock in batch {originalBatch.BatchNumber}.");
 
                 foreach (var clone in clonesToReturn)
                 {
-                    await _stockService.DeductFromBatchAsync(clone.Id, clone.CurrentQuantity, purchaseReturn.Id);
+                    await _stockService.DeductFromBatchAsync(clone.BatchId, clone.CurrentQuantity, purchaseReturn.Id);
                 }
             }
 

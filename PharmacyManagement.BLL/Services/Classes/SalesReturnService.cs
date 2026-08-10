@@ -1,5 +1,4 @@
 using AutoMapper;
-using Microsoft.EntityFrameworkCore;
 using PharmacyManagement.BLL.Common;
 using PharmacyManagement.BLL.Services.Interfaces;
 using PharmacyManagement.BLL.ViewModels.SalesReturnViewModels;
@@ -11,13 +10,23 @@ namespace PharmacyManagement.BLL.Services.Classes;
 public class SalesReturnService : ISalesReturnService
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ISalesReturnRepository _salesReturnRepository;
+    private readonly IDataTransactionManager _transactionManager;
     private readonly IMapper _mapper;
     private readonly IStockService _stockService;
     private readonly ICurrentUserService _currentUser;
 
-    public SalesReturnService(IUnitOfWork unitOfWork, IMapper mapper, IStockService stockService, ICurrentUserService currentUser)
+    public SalesReturnService(
+        IUnitOfWork unitOfWork,
+        ISalesReturnRepository salesReturnRepository,
+        IDataTransactionManager transactionManager,
+        IMapper mapper,
+        IStockService stockService,
+        ICurrentUserService currentUser)
     {
         _unitOfWork = unitOfWork;
+        _salesReturnRepository = salesReturnRepository;
+        _transactionManager = transactionManager;
         _mapper = mapper;
         _stockService = stockService;
         _currentUser = currentUser;
@@ -25,10 +34,7 @@ public class SalesReturnService : ISalesReturnService
 
     public async Task<IReadOnlyList<SalesReturnListItemViewModel>> GetAllAsync()
     {
-        var items = await _unitOfWork.GetRepository<SalesReturn>().Query()
-            .Include(r => r.Customer)
-            .OrderByDescending(r => r.ReturnDate)
-            .ToListAsync();
+        var items = await _salesReturnRepository.GetAllWithCustomerAsync();
 
         return items.Select(r => new SalesReturnListItemViewModel
         {
@@ -43,11 +49,7 @@ public class SalesReturnService : ISalesReturnService
 
     public async Task<SalesReturnViewModel?> GetByIdAsync(int id)
     {
-        var item = await _unitOfWork.GetRepository<SalesReturn>().Query()
-            .Include(r => r.Customer)
-            .Include(r => r.Items).ThenInclude(i => i.Medicine)
-            .Include(r => r.Items).ThenInclude(i => i.MedicineBatch)
-            .FirstOrDefaultAsync(r => r.Id == id);
+        var item = await _salesReturnRepository.GetByIdWithDetailsAsync(id);
 
         if (item == null) return null;
 
@@ -74,10 +76,7 @@ public class SalesReturnService : ISalesReturnService
 
     public async Task<CreateSalesReturnViewModel?> GetCreateModelFromInvoiceAsync(int invoiceId)
     {
-        var invoice = await _unitOfWork.GetRepository<SalesInvoice>().Query()
-            .Include(s => s.Items).ThenInclude(i => i.Medicine)
-            .Include(s => s.Items).ThenInclude(i => i.MedicineBatch)
-            .FirstOrDefaultAsync(s => s.Id == invoiceId);
+        var invoice = await _salesReturnRepository.GetInvoiceForCreateModelAsync(invoiceId);
 
         if (invoice == null) return null;
 
@@ -102,9 +101,7 @@ public class SalesReturnService : ISalesReturnService
         if (model.SalesInvoiceId <= 0)
             return ServiceResult<int>.Fail("Original invoice is required.");
 
-        var invoice = await _unitOfWork.GetRepository<SalesInvoice>().Query()
-            .Include(s => s.Items)
-            .FirstOrDefaultAsync(s => s.Id == model.SalesInvoiceId);
+        var invoice = await _salesReturnRepository.GetInvoiceWithItemsAsync(model.SalesInvoiceId);
 
         if (invoice == null)
             return ServiceResult<int>.Fail("Original invoice not found.");
@@ -121,9 +118,7 @@ public class SalesReturnService : ISalesReturnService
             if (sold == null)
                 return ServiceResult<int>.Fail($"Batch line was not on the original invoice.");
 
-            var alreadyReturned = await _unitOfWork.GetRepository<SalesReturnItem>().Query()
-                .Where(ri => ri.SalesReturn.SalesInvoiceId == invoice.Id && ri.MedicineBatchId == line.MedicineBatchId)
-                .SumAsync(ri => ri.Quantity);
+            var alreadyReturned = await _salesReturnRepository.GetReturnedQuantityAsync(invoice.Id, line.MedicineBatchId);
 
             if (line.Quantity + alreadyReturned > sold.Quantity)
                 return ServiceResult<int>.Fail($"Cannot return more than sold quantity for {line.MedicineName ?? "medicine"}.");
@@ -149,7 +144,7 @@ public class SalesReturnService : ISalesReturnService
             Items = returnItems
         };
 
-        await using var transaction = await _unitOfWork.Context.Database.BeginTransactionAsync();
+        await using var transaction = await _transactionManager.BeginTransactionAsync();
         try
         {
             _unitOfWork.GetRepository<SalesReturn>().Add(salesReturn);
@@ -179,5 +174,5 @@ public class SalesReturnService : ISalesReturnService
     }
 
     public async Task<int> GetReturnCountAsync() =>
-        await _unitOfWork.GetRepository<SalesReturn>().Query().CountAsync();
+        await _salesReturnRepository.GetReturnCountAsync();
 }

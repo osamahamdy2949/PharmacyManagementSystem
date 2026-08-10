@@ -62,7 +62,7 @@ public class CategoryService : ICategoryService
         if (await _unitOfWork.GetRepository<Medicine>().AnyAsync(m => m.CategoryId == id))
             return ServiceResult.Fail("Cannot delete category that has medicines.");
 
-        _unitOfWork.GetRepository<Category>().Remove(entity);
+        _unitOfWork.GetRepository<Category>().Delete(entity);
         var result = await _unitOfWork.SaveChangesAsync();
         return result > 0 ? ServiceResult.Ok() : ServiceResult.Fail("Failed to delete category.");
     }
