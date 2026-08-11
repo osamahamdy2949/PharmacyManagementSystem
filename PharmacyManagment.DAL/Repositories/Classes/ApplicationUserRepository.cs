@@ -11,11 +11,11 @@ public class ApplicationUserRepository : IApplicationUserRepository
 
     public ApplicationUserRepository(PharmacyDbContext context) => _context = context;
 
-    public Task<int> CountAsync(CancellationToken ct = default) =>
-        _context.Set<ApplicationUser>().AsNoTracking().CountAsync(ct);
+    public async Task<int> CountAsync(CancellationToken ct = default) =>
+        await _context.Set<ApplicationUser>().AsNoTracking().CountAsync(ct);
 
-    public Task<string?> GetFullNameByIdAsync(string userId, CancellationToken ct = default) =>
-        _context.Set<ApplicationUser>()
+    public async Task<string?> GetFullNameByIdAsync(string userId, CancellationToken ct = default) =>
+        await _context.Set<ApplicationUser>()
             .AsNoTracking()
             .Where(u => u.Id == userId)
             .Select(u => u.FullName)
